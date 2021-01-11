@@ -5,6 +5,8 @@ import numpy as np
 import pythoncom
 from win32com import client
 
+import logging
+
 
 class AWAInterface:
     def __init__(self):
@@ -29,7 +31,7 @@ class AWAInterface:
     def get_FG_image(self):
         return np.array(self.ni_frame_grabber.GetImage())
 
-    def set_magnets(self, counts, channels):
+    def set_parameters(self, counts, channels):
         assert len(counts) == len(channels)
 
         settings = []

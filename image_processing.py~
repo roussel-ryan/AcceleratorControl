@@ -1,0 +1,20 @@
+import numpy as np
+
+def weigthed_covarience(image):
+    #calculate the weighted covarience of an image
+    #used to find the rms beamsize and rotation angle
+
+    #normalize
+    image = image / np.sum(image)
+
+    #assign coordinate values for each pixel
+    x_coord = np.arange(image.shape[0])
+    y_coord = np.arange(image.shape[1])
+
+    xx,yy = np.meshgrid(x_ccord, y_coord)
+    pts = np.vstack(
+    
+    #get weigthed means
+    x_mean = 
+    
+    
