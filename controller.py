@@ -56,19 +56,18 @@ class AWAController:
 
         n_steps = self.config.get('scan_steps',5)
         n_samples = self.config.get('samples', 5)
-
-        
         
         self.logger.info(f'starting scan of {parameter_name} with {n_steps} steps and {n_samples} samples per step')
 
         X = torch.linspace(0,1,n_steps).reshape(-1,1)
         
         for x in X:
-            x_unnormed = utils.unnormalize(x, [self.get_parameter(parameter_name)])
+            x_unnormed = utils.unnormalize(x.reshape(1,-1),
+                                           [self.get_parameter(parameter_name)])
             self.set_parameters(x_unnormed, [parameter_name])
-            self.observe(x, obs, n_samples)
+            self.observe(obs, n_samples)
     
-    def observe(self, x, obs, n_samples):
+    def observe(self, obs, n_samples):
         values = torch.empty((n_samples, 1))
         for i in range(n_samples):
             values[i] = obs(self.interface)
@@ -77,9 +76,12 @@ class AWAController:
         state = self.state[-1]
         tarray = torch.cat([state.reshape(1,-1) for i in range(n_samples)])
         tarray = np.hstack([tarray, values.reshape(n_samples,1)])
-        temp_df = pd.DataFrame(data = tarray, columns = [p.name for p in self.parameters] + [obs.name])
+        temp_df = pd.DataFrame(data = tarray,
+                               columns = [p.name for p in self.parameters] +
+                               [obs.name])
             
-        self.observation_data = pd.concat([self.observation_data,temp_df], ignore_index = True)
+        self.observation_data = pd.concat([self.observation_data,temp_df],
+                                          ignore_index = True)
             
         return values
     
@@ -100,7 +102,8 @@ class AWAController:
         assert x.shape[0] == len(parameter_names)
         self.logger.info(f'setting parameters {parameter_names} to values {x}') 
 
-        parameters = [self.parameters[self.index_key[name]] for name in parameter_names]
+        parameters = [self.parameters[
+            self.index_key[name]] for name in parameter_names]
         
         
         if not self.testing:

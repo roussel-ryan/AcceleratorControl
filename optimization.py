@@ -95,7 +95,8 @@ class SingleObjectiveBayesian:
         
     def fit_gp(self):
         #fits GP model
-        mll = ExactMarginalLogLikelihood(self.gp.likelihood, gp)
+        mll = ExactMarginalLogLikelihood(self.gp.likelihood,
+                                         self.gp)
         fit_gpytorch_model(mll)
         
     def get_data(self, normalize = True):
