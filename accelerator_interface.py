@@ -42,7 +42,7 @@ class AWAInterface:
         self.AWABeamlineClient.connect(('192.168.0.9',80))
 
         for ii in range(len(counts)):
-            cmd += f' \{ {settings[ii][0]} {settings[ii][1]} \}'
+            cmd += f' {{ {settings[ii][0]} {settings[ii][1]} }}'
         cmd += ' \n'
         logging.info(f'sent command: {cmd}')
 

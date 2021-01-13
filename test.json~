@@ -1,0 +1,15 @@
+{
+    "wait_time" : 0.1,
+    "parameters": [
+	{
+	    "name" : "FocusingSolenoid",
+	    "channel" : 1,
+	    "bounds" : [1, 100]
+	},
+	{
+	    "name" : "BuckingSolenoid",
+	    "channel" : 2,
+	    "bounds" : [30, 90]
+    ]
+    
+}

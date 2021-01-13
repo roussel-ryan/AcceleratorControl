@@ -1,0 +1,118 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import json
+import torch
+import time
+
+from botorch import utils as b_utils
+
+import ScreenTools
+import accelerator_interface
+import observations
+
+'''
+The goal of this script is to conduct simple single objective upper confidence bound optimization of the AWA photoinjector. We try to minimize the beamsize at a YAG screen by changing the focusing solenoid strength.
+
+The script executs as follows:
+- we start by reading in the script settings given the CSV file UCB_settings.csv
+- we then scan several points for the solenoid strength, measuring several shots with the same input setting
+- we then optimize the GP hyperparameters using this data
+- finally we conduct the optimization loop to minimize the spot size
+
+'''
+
+class Parameter:
+    def __init__(self, name, channel, bounds):
+        self.name = name
+        self.channel = channel
+        self.bounds = bounds
+
+        
+        
+class AWAController:
+    def __init__(self, config_fname, obs_func, testing = False):
+        assert isinstance(obs_func, observation.Observation)
+        
+        self.obs_func = obs_func
+        self._import_config()
+
+        if testing:
+            self.interface = accelerator_interface.AWAInterface()
+        else:
+            self.interface = None
+            
+        self.logger = logging.get_logger()
+
+        
+        
+    def do_scan(self, parameter_name):
+        '''
+        1D scan of a parameter
+        '''
+
+        n_steps = self.config.get('scan_steps',5)
+        n_samples = self.config.get('samples', 5)
+
+        param = self.parameters[parameter_name]
+        
+        self.logger.info(f'starting scan of {param.name} with {n_steps} and {n_samples} per step')
+
+        X = np.linspace(0,1,n_steps).reshape(-1,1)
+
+        for x in X:
+            x_unnormed = self.unnormalize(x, [param])
+            self.set_parameters(x_unnormed, [param])
+            self.observe(x, [param], n_samples)
+            
+    def observe(self, x, parameters, n_samples):
+        values = []
+        for i in range(n_samples):
+            values += [self.obs_func(self.interface)]
+            time.sleep(self.wait_time)
+        
+    
+            
+    def set_parameters(x, parameters):
+        '''
+        set parameter values based on input x
+        
+        Arguments
+        ---------
+        x : torch.Tensor
+            Counts value of input parameters
+        
+        parameters : list
+            List of Parameter objects
+
+        '''
+        assert x.shape[0] == len(parameters)
+        self.logger.info('setting parameters {[p.name for p in parameters]} to values {x}') 
+        self.interface.set_parameters(x,[p.channel for p in parameters])
+        time.sleep(self.wait_time)
+        
+    
+
+    def normalize(x, parameters):
+        assert x.shape[0] == len(parameters)
+
+        #create bounds tensor
+        bounds = torch.cat([p.bounds for p in parameters])
+        return b_utils.transforms.normalize(x, bounds)    
+
+    def unnormalize(x, parameters):
+        assert x.shape[0] == len(parameters)
+
+        #create bounds tensor
+        bounds = torch.cat([p.bounds for p in parameters])
+        return b_utils.transforms.unnormalize(x, bounds)    
+    
+
+    def _import_config(self, fname):
+        with open(fname) as f:
+            self.config = json.load(f)
+
+        self.params = self.config['parameters']
+
+        self.wait_time = self.config.get('wait_time',2.0)
+
+            
