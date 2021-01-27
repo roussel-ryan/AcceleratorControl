@@ -9,6 +9,13 @@ import logging
 
 
 class AWAInterface:
+    '''
+        Class to handle low lever accelerator operations inculding:
+        - connecting to windows and camera interfaces
+        - setting and getting parameter values
+        - reading image data from normal and Blackfly cameras
+    '''
+    
     def __init__(self):
         self.initialize_connections()
 
