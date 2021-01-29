@@ -1,8 +1,11 @@
 import numpy as np
 import torch
-import image_processing as ip
 import os
 import time
+import h5py
+
+import image_processing as ip
+
 
 class Observation:
     '''
@@ -74,7 +77,19 @@ class ImageSave(Observation):
             image = controller.interface.get_image(self.camera_type)
 
         fname = self.folder + '/' + self.base_fname + '_' + str(int(time.time())) + '.h5'
-        controller.logger.info(f'saving image file to {fname}')
 
-        return torch.tensor([float('nan')])
+        with h5py.File(fname,'w') as f:
+            dset = f.create_dataset('image', data = image)
+
+            cols = controller.parameter_names
+            vals = controller.data.tail(1).to_numpy()[0]
+            print(cols)
+            print(vals)
+            
+            for key, val in zip(cols, vals):
+                dset.attrs[key] = val
+
+        controller.logger.info(f'saved image to file: {fname}')
+        
+        return [True]
 

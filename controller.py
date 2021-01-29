@@ -6,13 +6,13 @@ import time
 import logging
 import pandas as pd
 
-
 import ScreenTools
 
 import accelerator_interface
 import observations
 import parameter
 import utilities as utils
+import transformer
 
 class AWAController:
     '''
@@ -36,20 +36,11 @@ class AWAController:
         else:
             self.interface = None
             
-        #get number of parameters/objectives to store input parameter state and observation data
-        #    parameter states are stored in a torch.Tensor
-        #    observation data is stored in a pandas.Dataframe object
-        self.n_parameters = len(self.parameters)
-        self.index_key = dict(zip([p.name for p in self.parameters],range(self.n_parameters)))
         
-        self.state = torch.zeros((1, self.n_parameters))
-
-        self.observation_data = pd.DataFrame(
-            dict(zip([p.name for p in self.parameters],
-                     [[] for i in range(self.n_parameters)])))
-                    
+        self.data = pd.DataFrame(np.zeros((1, self.n_parameters)),
+                                 columns = self.parameter_names)        
         
-    def do_scan(self, parameter_name, obs):
+    def do_scan(self, parameter_name, lower, upper, obs):
         '''
         1D scan of a parameter with one observation
         '''
@@ -59,31 +50,28 @@ class AWAController:
         
         self.logger.info(f'starting scan of {parameter_name} with {n_steps} steps and {n_samples} samples per step')
 
-        X = torch.linspace(0,1,n_steps).reshape(-1,1)
+        X = np.linspace(lower, upper, n_steps).reshape(-1,1)
         
         for x in X:
-            x_unnormed = utils.unnormalize(x.reshape(1,-1),
-                                           [self.get_parameter(parameter_name)])
-            self.set_parameters(x_unnormed, [parameter_name])
+            self.set_parameters(x, [parameter_name])
             self.observe(obs, n_samples)
     
     def observe(self, obs, n_samples, **kwargs):
         wait_time = kwargs.get('wait_time', self.wait_time)
         
-        values = torch.empty((n_samples, 1))
+        values = np.empty((n_samples, 1))
         for i in range(n_samples):
             values[i] = obs(self)
             time.sleep(wait_time)
 
-        state = self.state[-1]
-        tarray = torch.cat([state.reshape(1,-1) for i in range(n_samples)])
+        state = self.data[self.parameter_names].tail(1)
+        tarray = np.vstack([state.to_numpy() for i in range(n_samples)])
         tarray = np.hstack([tarray, values.reshape(n_samples,1)])
         temp_df = pd.DataFrame(data = tarray,
-                               columns = [p.name for p in self.parameters] +
-                               [obs.name])
+                               columns =  self.parameter_names + [obs.name])
             
-        self.observation_data = pd.concat([self.observation_data,temp_df],
-                                          ignore_index = True)
+        self.data = pd.concat([self.data,temp_df],
+                              ignore_index = True)
             
         return values
     
@@ -94,7 +82,7 @@ class AWAController:
         
         Arguments
         ---------
-        x : torch.Tensor (n_parameters,)
+        x : np.array (n_parameters,)
             Counts value of input parameters
         
         parameters : list
@@ -104,43 +92,46 @@ class AWAController:
         assert x.shape[0] == len(parameter_names)
         self.logger.info(f'setting parameters {parameter_names} to values {x}') 
 
-        parameters = [self.parameters[
-            self.index_key[name]] for name in parameter_names]
-        
-        
-        if not self.testing:
-            self.interface.set_parameters(x,[p.channel for p in parameters])
-        
-        time.sleep(self.wait_time)
+        parameters = [self.parameters[name] for name in parameter_names]
 
-        #append new state to state history
-        new_state = self.state[-1].clone()
-        for p,val in zip(parameters, x):
-            new_state[self.index_key[p.name]] = val
+        #check parameter settings inside machine bounds
+        try:
+            for x_val, p in zip(x, parameters):
+                utils.check_bounds(x_val,p)
+                
+            if not self.testing:
+                self.interface.set_parameters(x,[p.channel for p in parameters])
+        
+            time.sleep(self.wait_time)
 
-        self.state = torch.cat([self.state, new_state.reshape(1,-1)])
-        
-        
-    def get_parameter(self, name):
-        return self.parameters[self.index_key[name]]
-        
-    def get_parameters(self, param_names):
-        p = []
-        param_names = list(param_names) if not isinstance(param_names,list) else param_names
-        for name in param_names:
-            p += [self.parameters[self.index_key[name]]]
-        return p
+            #append new state to data
+            new_state = self.data[self.parameter_names].tail(1).copy(deep = True)
+            for p, val in zip(parameters, x):
+                new_state[p.name] = val
 
-    
+            self.data = pd.concat([self.data, new_state], ignore_index = True)
+
+        except utils.OutOfBoundsError:
+            logging.warning('Out of parameter bounds!')
+            
 
     def _import_config(self, fname):
         with open(fname) as f:
             self.config = json.load(f)
 
-        self.parameters = parameter.import_parameters(self.config['parameters'])
-        self.logger.info(f'Imported parameters {[p.name for p in self.parameters]}')
+        parameters_list = parameter.import_parameters(self.config['parameters'])
+        self.parameters = {p.name : p for p in parameters_list}
+        self.parameter_names = list(self.parameters.keys())
+
+        self.logger.info(f'Imported parameters {self.parameter_names}')
+        self.n_parameters = len(self.parameter_names)
         
         self.wait_time = self.config.get('wait_time',2.0)
 
+        #get normalization for each parameter
+        x = np.hstack([self.parameters[ele].bounds.reshape(2,1) for ele in self.parameter_names])
+        self.tx = transformer.Transformer(x)
+        
     def reset(self):
-        self.state = torch.empty((1,self.n_parameters))
+        raise NotImplementedError
+        #self.state = torch.empty((1,self.n_parameters))

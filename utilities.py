@@ -1,6 +1,14 @@
-import torch
-from botorch import utils as b_utils
+import transformer
 
+class OutOfBoundsError(Exception):
+    pass
+
+def check_bounds(x, parameter):
+    #check if x is inside parameter bounds
+    print(x)
+    print(parameter.bounds)
+    if (float(x) < float(parameter.bounds[0])) or (float(x) > float(parameter.bounds[1])):
+        raise OutOfBoundsError
 
 def normalize(x, parameters):
     assert x.shape[1] == len(parameters)

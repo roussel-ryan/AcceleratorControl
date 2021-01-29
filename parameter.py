@@ -1,5 +1,4 @@
 import numpy as np
-import torch
 import json
 
 class Parameter:
@@ -12,7 +11,7 @@ def import_parameters(param_list):
     #import parameter objects and settings (channel, bounds etc.) from list of dicts
     plist = []
     for ele in param_list:
-        p = Parameter(ele['name'], ele['channel'], torch.Tensor(ele['bounds']))
+        p = Parameter(ele['name'], ele['channel'], np.array(ele['bounds']))
         plist += [p]
 
     return plist
