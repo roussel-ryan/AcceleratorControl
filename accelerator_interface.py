@@ -5,6 +5,7 @@ import numpy as np
 import pythoncom
 from win32com import client
 
+from epics import caget, caput, cainfo
 import logging
 
 
@@ -64,3 +65,14 @@ class AWAInterface:
         self.AWABeamlineClient.send(cmd.encode())
         data = self.AWABeamlineClient.recv(512)
         logging.info(f'response: {data}')
+
+    def set_beamline(self, pvnames,pvvals):
+        assert len(pvnames) == len(pvvals)
+
+        for i in range(len(pvnames)):
+           caput(pvnames[i], pvvals[i])
+           logging.info(f'caput {pvnames[i]} {pvvals[i]}')
+
+        logging.info(f'set_beamline called')
+        
+
