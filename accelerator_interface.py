@@ -24,6 +24,14 @@ class AWAInterface:
     def close(self):
         self.AWABeamlineClient.close()
         self.AWAPGCamera.Application.Quit()
+
+    def get_image(self, camera_type):
+        if camera_type == 'PG':
+            return self.get_PG_image()
+        elif camera_type == 'FG':
+            return self.get_FG_image()
+        else:
+            raise KeyError('camera type not found!')
         
     def get_PG_image(self):
         return np.array(self.AWAPGCamera.GetImage())

@@ -67,11 +67,13 @@ class AWAController:
             self.set_parameters(x_unnormed, [parameter_name])
             self.observe(obs, n_samples)
     
-    def observe(self, obs, n_samples):
+    def observe(self, obs, n_samples, **kwargs):
+        wait_time = kwargs.get('wait_time', self.wait_time)
+        
         values = torch.empty((n_samples, 1))
         for i in range(n_samples):
-            values[i] = obs(self.interface)
-            time.sleep(self.wait_time)
+            values[i] = obs(self)
+            time.sleep(wait_time)
 
         state = self.state[-1]
         tarray = torch.cat([state.reshape(1,-1) for i in range(n_samples)])
