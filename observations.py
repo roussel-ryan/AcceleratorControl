@@ -33,26 +33,35 @@ class Observation:
 
         interface : 
         '''
-        raise NotImplementedError
+        #raise NotImplementedError
+        img=controller.interface.GetNewImage()
+        cx=controller.interface.CentroidX
+        cy=controller.interface.CentroidY
+        fwhmx=controller.interface.FWHMX 
+        fwhmy=controller.interface.FWHMY 
+        radius=np.sqrt(fwhmx*fwhmx+fwhmy*fwhmy)
+        #return ip.measurespot(img,(cx,cy),radius)
+        return radius
 
-class Test(Observation):
-    def __init__(self):
-        super().__init__('TestObservation')
+# class Test(Observation):
+#     def __init__(self):
+#         super().__init__('TestObservation')
 
-    def __call__(self, controller):
-        return torch.randn(1)
+#     def __call__(self, controller):
+#         return torch.randn(1)
         
-class RMSBeamSizeX(Observation):
-    def __init__(self, screen_center, screen_radius):
-        self.screen_center = screen_center
-        self.screen_radius = screen_radius
+# class RMSBeamSizeX(Observation):
+#     def __init__(self, screen_center, screen_radius):
+#         self.screen_center = screen_center
+#         self.screen_radius = screen_radius
         
-        super().__init__('RMSBeamSizeX')
+#         super().__init__('RMSBeamSizeX')
 
-    def __call__(self, controller):
+#     def __call__(self, controller):
         
         
-        return torch.as_tensor((5.0)) + torch.rand(1)
+#         return torch.as_tensor((5.0)) + torch.rand(1)
+        
 
 class ImageSave(Observation):
     '''
@@ -74,7 +83,8 @@ class ImageSave(Observation):
         if controller.testing:
             image = np.ones((700,700))
         else:
-            image = controller.interface.get_image(self.camera_type)
+#            image = controller.interface.get_image(self.camera_type)
+            image = controller.interface.GetImage()
 
         fname = self.folder + '/' + self.base_fname + '_' + str(int(time.time())) + '.h5'
 

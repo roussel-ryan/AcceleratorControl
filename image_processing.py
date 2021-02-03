@@ -35,10 +35,11 @@ def measure_spot(image, center, radius, sigma = 3, threshold = 0.1):
     means, variances = calculate_moments(lbls, fimage, n_blobs)
 
     #return beam size
-    return np.sqrt(np.diag(variances[0]))
+    return variances
+#    return np.sqrt(np.diag(variances[0]))
 
 
-def create_mask(image, center, radius):
+def create_mask(array, center, radius):
     '''
     set all elements outside of circular mask to zero
 
@@ -94,7 +95,7 @@ def id_blobs(image, threshold = 0.01):
 
     return labeled, n_objects
 
-def calculate_moments(labeled, image, n_objects):
+def calculate_moments(labeled, image, n_obj):
     '''
     calculate the means and covariance matricies of the image inside of 
     labeled objects

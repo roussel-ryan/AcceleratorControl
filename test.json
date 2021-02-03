@@ -3,13 +3,13 @@
     "parameters": [
 	{
 	    "name" : "FocusingSolenoid",
-	    "channel" : 1,
-	    "bounds" : [1, 100]
+	    "channel" : "AWA:Drive:DS2:Ctrl",
+	    "bounds" : [1.0, 9.0]
 	},
 	{
 	    "name" : "BuckingSolenoid",
-	    "channel" : 2,
-	    "bounds" : [30, 90]
+	    "channel" : "AWA:Drive:DS1:Ctrl",
+	    "bounds" : [7.0, 9.0]
 	}
     ]
     

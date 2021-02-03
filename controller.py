@@ -57,12 +57,12 @@ class AWAController:
             self.observe(obs, n_samples)
     
     def observe(self, obs, n_samples, **kwargs):
-        wait_time = kwargs.get('wait_time', self.wait_time)
+ #       wait_time = kwargs.get('wait_time', self.wait_time)
         
         values = np.empty((n_samples, 1))
         for i in range(n_samples):
             values[i] = obs(self)
-            time.sleep(wait_time)
+#            time.sleep(wait_time)
 
         state = self.data[self.parameter_names].tail(1)
         tarray = np.vstack([state.to_numpy() for i in range(n_samples)])
@@ -100,7 +100,8 @@ class AWAController:
                 utils.check_bounds(x_val,p)
                 
             if not self.testing:
-                self.interface.set_parameters(x,[p.channel for p in parameters])
+                #self.interface.set_parameters(x,[p.channel for p in parameters])
+                self.interface.set_beamline([p.channel for p in parameters],x)
         
             time.sleep(self.wait_time)
 
