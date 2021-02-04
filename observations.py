@@ -21,10 +21,11 @@ class Observation:
               a given measurement
 
     '''
+    
     def __init__(self, name):
         self.name = name
 
-    def __call__(self, controller):
+    def __call__(self, controller,nsamples):
         '''
         do observation
 
@@ -34,14 +35,14 @@ class Observation:
         interface : 
         '''
         #raise NotImplementedError
-        img=controller.interface.GetNewImage()
-        cx=controller.interface.CentroidX
-        cy=controller.interface.CentroidY
-        fwhmx=controller.interface.FWHMX 
-        fwhmy=controller.interface.FWHMY 
-        radius=np.sqrt(fwhmx*fwhmx+fwhmy*fwhmy)
+        self.img=controller.interface.GetNewImage(nsamples)
+        self.cx=controller.interface.CentroidX
+        self.cy=controller.interface.CentroidY
+        self.fwhmx=controller.interface.FWHMX 
+        self.fwhmy=controller.interface.FWHMY 
+        self.radius=np.sqrt(self.fwhmx*self.fwhmy)
         #return ip.measurespot(img,(cx,cy),radius)
-        return radius
+        return self.radius
 
 # class Test(Observation):
 #     def __init__(self):
@@ -84,7 +85,7 @@ class ImageSave(Observation):
             image = np.ones((700,700))
         else:
 #            image = controller.interface.get_image(self.camera_type)
-            image = controller.interface.GetImage()
+            image = controller.interface.img
 
         fname = self.folder + '/' + self.base_fname + '_' + str(int(time.time())) + '.h5'
 

@@ -39,7 +39,7 @@ class AWAInterface:
         else:
             self.ni_frame_grabber = client.Dispatch('NIFGCtrl') 
             self.m_CameraPort=self.m_AWANIFGPort
-        self.m_CameraClient.connect(("127.0.0.1",ui.m_CameraPort))        
+        self.m_CameraClient.connect(("127.0.0.1",self.m_CameraPort))        
         self.m_CameraClient.setblocking(0)
         
         self.Initialized=True
@@ -61,24 +61,39 @@ class AWAInterface:
                 return np.array(self.AWAPGCamera.GetImage())
         else:
             return 0
-    def GetNewImage(self):
+    def GetNewImage(self, NSamples):
         #Connect to camera broadcasting TCP port for notifications
         #If it is timed out, then just download and return whatever image available 
-        ready = select.select([self.m_CameraClient], [], [], 2)
-        if ready[0]:  
-            a=self.m_CameraClient.recv(1024)
-            #print(a)
-            b="".join(chr(x) for x in a)
-            c=eval(b)
-            self.FWHMX=c['FWHMX']
-            self.FWHMY=c['FWHMY']
-            self.FWHML=c['FWHML']
-            self.CentroidX=c['CX']
-            self.CentroidY=c['CY']
-            self.NewMeasurement=True
-        else:
-            self.NewMeasurement=False
-        return GetImage()
+        #In order to avoid the complication of TCP buffer cleanup
+        #we will simply close the connection and reopen it
+        self.m_CameraClient.close();
+        self.m_CameraClient = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.m_CameraClient.connect(("127.0.0.1",self.m_CameraPort))        
+        self.m_CameraClient.setblocking(0)
+        NShots=0
+        self.img={}
+        self.FWHMX=np.empty((NSamples, 1))
+        self.FWHMY=np.empty((NSamples, 1))
+        self.FWHML=np.empty((NSamples, 1))
+        self.CentroidX=np.empty((NSamples, 1))
+        self.CentroidY=np.empty((NSamples, 1))
+
+        while (NShots<NSamples): 
+            ready = select.select([self.m_CameraClient], [], [], 2)
+            if ready[0]:  
+                a=self.m_CameraClient.recv(1024)
+                #print(a)
+                b="".join(chr(x) for x in a)
+                c=eval(b)
+                self.FWHMX[NShots] =c['FWHMX']
+                self.FWHMY[NShots]=c['FWHMY']
+                self.FWHML[NShots]=c['FWHML']
+                self.CentroidX[NShots]=c['CX']
+                self.CentroidY[NShots]=c['CY']
+                self.NewMeasurement=True
+                self.img[NShots]=self.GetImage()
+                NShots += 1
+        return self.img
         
     # def get_PG_image(self):
     #     return np.array(self.AWAPGCamera.GetImage())
@@ -86,7 +101,7 @@ class AWAInterface:
     # def get_FG_image(self):
     #     return np.array(self.ni_frame_grabber.GetImage())
 
-     def set_parameters(self, setvals, channels):
+    def set_parameters(self, setvals, channels):
          #power supply control settings are -10.0 to 10.0
          #for full dynamic range for bipolar PS.
          #

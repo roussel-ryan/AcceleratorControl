@@ -60,8 +60,9 @@ class AWAController:
  #       wait_time = kwargs.get('wait_time', self.wait_time)
         
         values = np.empty((n_samples, 1))
-        for i in range(n_samples):
-            values[i] = obs(self)
+        values = obs(self,n_samples)
+#       for i in range(n_samples):
+#            values[i] = obs(self)
 #            time.sleep(wait_time)
 
         state = self.data[self.parameter_names].tail(1)
@@ -136,3 +137,4 @@ class AWAController:
     def reset(self):
         raise NotImplementedError
         #self.state = torch.empty((1,self.n_parameters))
+
