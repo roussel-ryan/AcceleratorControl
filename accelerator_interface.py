@@ -11,20 +11,22 @@ import logging
 
 
 class AWAInterface:
-    UseNIFG=False
-    Initialized=False
+    UseNIFG = False
+    Initialized = False
     m_CameraClient = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    m_AWACameraHost="127.0.0.1"
-    m_AWAPGCamPort=2019
-    m_AWANIFGPort=2029
-    NewMeasurement=False
-    FWHMX=10000
-    FMHMY=10000
-    FMHML=10000
-    TempVal=0.0
-    Testing=False
+    m_AWACameraHost = "127.0.0.1"
+    m_AWAPGCamPort = 2019
+    m_AWANIFGPort = 2029
+    NewMeasurement = False
+    FWHMX = 10000
+    FMHMY = 10000
+    FMHML = 10000
+    TempVal = 0.0
+    Testing = False
+
+    
     def __init__(self,UseFrameGrabber=True,Testing=False):
-        self.Testing=Testing
+        self.Testing = Testing
         self.initialize_connections(UseFrameGrabber)
 
     def initialize_connections(self,UseFrameGrabber):
@@ -131,10 +133,10 @@ class AWAInterface:
         
     def test(self, NSamples):
         self.GetNewImage(NSamples)
-        NShots=0
-        r=np.sin(self.TempVal)
-        while (NShots<NSamples):
+        NShots = 0
+        r = np.sin(self.TempVal)
+        while (NShots < NSamples):
             self.FWHMX[NShots] = sum(r)
             self.FWHMY[NShots] = r[0]
             NShots += 1
-        return self.FWHMY
+        return self.FWHMX

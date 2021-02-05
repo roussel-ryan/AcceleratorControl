@@ -27,19 +27,28 @@ class Transformer:
     def forward(self, x_old):
         x = x_old.copy()
         assert len(x.shape) == 2
+
+        
         if self.ttype == 'normalize':
             for i in range(x.shape[1]):
-                x[:,i] = (x[:,i] - self.mins[i]) /(self.maxs[i] - self.mins[i])
-
+                if self.maxs[i] - self.mins[i] == 0.0:
+                    x[:,i] = x[:,i] - self.mins[i]
+                else:
+                    x[:,i] = (x[:,i] - self.mins[i]) /(self.maxs[i] - self.mins[i])
+                    
         elif self.ttype == 'standardize':
             for i in range(x.shape[1]):
-                x[:,i] = (x[:,i] - self.means[i]) / self.stds[i]
+                if self.stds[i] == 0:
+                    x[:,i] = x[:,i] - self.means[i]
+                else:
+                    x[:,i] = (x[:,i] - self.means[i]) / self.stds[i]
 
         return x
                 
     def backward(self, x_old):
         x = x_old.copy()
         assert len(x.shape) == 2
+        
         if self.ttype == 'normalize':
             for i in range(x.shape[1]):
                 x[:,i] = x[:,i] * (self.maxs[i] - self.mins[i]) + self.mins[i]

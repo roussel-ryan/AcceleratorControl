@@ -7,6 +7,8 @@ class Parameter:
         self.channel = channel
         self.bounds = bounds
 
+    
+        
 def import_parameters(param_list):
     #import parameter objects and settings (channel, bounds etc.) from list of dicts
     plist = []

@@ -4,6 +4,7 @@ import torch
 import parameter
 import observations
 import utilities as utils
+import transformer
 
 from botorch.models import SingleTaskGP
 from botorch.fit import fit_gpytorch_model
@@ -22,7 +23,7 @@ class SingleObjectiveBayesian:
 
     '''
 
-    def __init__(self, parameters, objective, controller, **kwargs):
+    def __init__(self, parameters, objective, controller, maximize = False, **kwargs):
         '''
         Initialize optimizer
 
@@ -37,11 +38,11 @@ class SingleObjectiveBayesian:
         controller : controller.AWAController
              Controller object used to control the accelerator
         
-        minimize : bool
+        minimize : bool, default = True
              If True minimize the objective, otherwise maximize
 
         '''
-        pkey=list(parameters.keys())
+        pkey = list(parameters.keys())
         
         assert isinstance(parameters[pkey[0]], parameter.Parameter)
         assert isinstance(objective, observations.Observation)
@@ -54,30 +55,25 @@ class SingleObjectiveBayesian:
         self.parameter_names = list(self.parameters.keys())
         self.n_parameters = len(self.parameters)
 
+        self.maximize = maximize
         
         #check if data is available
         #Data won't be available until observe of ctrl has been called.
         X, f = self.get_data()
+
         #contruct a GP model
         self.gp = SingleTaskGP(X,f)
 
         self.beta = kwargs.get('beta',0.1)
 
     def optimize(self, n_steps = 10, n_samples = 5):
-        b1=self.parameters[self.parameter_names[0]].bounds
-        b2=self.parameters[self.parameter_names[1]].bounds
-        d1=b1[1]-b1[0]
-        d2=b2[1]-b2[0]
         for i in range(n_steps):
             #get candidate for observation
             candidate = self.max_acqf()
 
-            #unnormalize
-            #candidate = utils.unnormalize(candidate, self.parameters)
-            candidate[0][0] *= d1
-            candidate[0][1] *= d2
-            candidate[0][0] += b1[0]
-            candidate[0][1] += b2[0]
+            #unnormalize candidate
+            candidate = self.controller.tx.backward(candidate.numpy().reshape(1,-1))
+            
             #set parameters
             self.controller.set_parameters(candidate.flatten(), self.parameter_names)
 
@@ -94,7 +90,7 @@ class SingleObjectiveBayesian:
         
     def max_acqf(self):
         #finds new canidate point based on UCB acquisition function
-        UCB = UpperConfidenceBound(self.gp, self.beta)
+        UCB = UpperConfidenceBound(self.gp, self.beta, maximize = self.maximize)
         bounds = torch.stack([torch.zeros(self.n_parameters),
                               torch.ones(self.n_parameters)])
         candidate, acq_value = optimize_acqf(UCB, bounds = bounds,
@@ -109,7 +105,7 @@ class SingleObjectiveBayesian:
                                          self.gp)
         fit_gpytorch_model(mll)
         
-    def get_data(self, normalize = False):
+    def get_data(self, normalize = True):
         '''
         return numpy array with observations and convert to torch
         Note: by default input parameters are normalized from 0 to 1
@@ -119,22 +115,19 @@ class SingleObjectiveBayesian:
 
         '''
 
-        f = self.controller.data[self.objective.name]
-        #X = self.controller.data[
-        #    [p.name for p in self.parameters]]
+        f = self.controller.data[self.objective.name].to_numpy().reshape(-1,1)
         X = self.controller.data[
-            [p for p in self.parameter_names]]
-
-#        X = torch.Tensor(X.to_numpy())
-        print(X)
-        X = torch.Tensor(X.to_numpy())
-        f = torch.Tensor(f.to_numpy())
-
+            [p for p in self.parameter_names]].to_numpy()
+        
         if normalize:
             #standardize f
-            f = transforms.standardize(f)
-            X = utils.normalize(X, self.parameters)
-        f = f.reshape(-1,1)
+            tf = transformer.Transformer(f)
+            f = tf.forward(f)
+            X = self.controller.tx.forward(X)
+        
+        X = torch.from_numpy(X)
+        f = torch.from_numpy(f)
+
             
         return X, f
                                                     

@@ -37,8 +37,8 @@ c.observe(obs, 5)
 
 opt_params = c.parameters
 opt_obj = obs
-opt = optimization.SingleObjectiveBayesian(opt_params, opt_obj, c)
-opt.optimize(10)
+opt = optimization.SingleObjectiveBayesian(opt_params, opt_obj, c, beta = 2.0)
+opt.optimize(15,1)
 #opt.optimize()
 
 print(c.data)

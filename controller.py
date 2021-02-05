@@ -48,7 +48,9 @@ class AWAController:
         n_steps = self.config.get('scan_steps',5)
         n_samples = self.config.get('samples', 5)
         
-        self.logger.info(f'starting scan of {parameter_name} with {n_steps} steps and {n_samples} samples per step')
+        self.logger.info(f'starting scan of {parameter_name}'\
+                         'with {n_steps} steps and {n_samples}'\
+                         'samples per step')
 
         X = np.linspace(lower, upper, n_steps).reshape(-1,1)
         
@@ -103,12 +105,20 @@ class AWAController:
                 utils.check_bounds(x_val,p)
             if not self.testing:
                 #self.interface.set_parameters(x,[p.channel for p in parameters])
-                self.logger.info(f'setting parameters {parameter_names} to values {x}') 
+                self.logger.info(
+                    f'setting parameters {parameter_names} to values {x}') 
 
-                self.interface.set_beamline([p.channel for p in parameters],x)
+                self.interface.set_beamline(
+                    [p.channel for p in parameters],x)
+                
             else:
-                self.logger.info(f'Test: setting parameters {parameter_names} to values {x}') 
-                self.interface.set_beamline([p.channel for p in parameters],x)
+                self.logger.info(
+                    f'Test: setting parameters {parameter_names}'\
+                    f' to values {x}')
+                
+                self.interface.set_beamline(
+                    [p.channel for p in parameters],x)
+                
             time.sleep(self.wait_time)
 
             #append new state to data
