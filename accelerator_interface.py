@@ -21,33 +21,42 @@ class AWAInterface:
     FWHMX=10000
     FMHMY=10000
     FMHML=10000
-    def __init__(self):
-        self.initialize_connections(True)
+    TempVal=0.0
+    Testing=False
+    def __init__(self,UseFrameGrabber=True,Testing=False):
+        self.Testing=Testing
+        self.initialize_connections(UseFrameGrabber)
 
     def initialize_connections(self,UseFrameGrabber):
         #image client
-        if(self.Initialized==True):
-            del self.ni_frame_grabber
-            del self.AWAPGCamera
-            self.m_CameraClient.close()
-            self.m_CameraClient = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        pythoncom.CoInitialize()
-        self.UseNIFG=UseFrameGrabber
-        if(self.UseNIFG==False):
-            self.AWAPGCamera = client.Dispatch('AWAPGCamera.application')
-            self.m_CameraPort=self.m_AWAPGCamPort            
-        else:
-            self.ni_frame_grabber = client.Dispatch('NIFGCtrl') 
-            self.m_CameraPort=self.m_AWANIFGPort
-        self.m_CameraClient.connect(("127.0.0.1",self.m_CameraPort))        
-        self.m_CameraClient.setblocking(0)
         
-        self.Initialized=True
+        if(self.Testing==True):
+            self.Initialized=False
+        else:
+            if(self.Initialized==True):
+                del self.ni_frame_grabber
+                del self.AWAPGCamera
+                self.m_CameraClient.close()
+                self.m_CameraClient = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            pythoncom.CoInitialize()
+            self.UseNIFG=UseFrameGrabber
+            if(self.UseNIFG==False):
+                self.AWAPGCamera = client.Dispatch('AWAPGCamera.application')
+                self.m_CameraPort=self.m_AWAPGCamPort            
+            else:
+                self.ni_frame_grabber = client.Dispatch('NIFGCtrl') 
+                self.m_CameraPort=self.m_AWANIFGPort
+            self.m_CameraClient.connect(("127.0.0.1",self.m_CameraPort))        
+            self.m_CameraClient.setblocking(0)
+            
+            self.Initialized=True
         #setpoint client
         #self.AWABeamlineClient = socket.socket(socket.AF_INET, socket. SOCK_STREAM)
         
     def close(self):
         #self.AWABeamlineClient.close()
+        if(self.Initialized==False):
+            return
         if(self.UseNIFG==True):
             del self.ni_frame_grabber
         else:
@@ -66,10 +75,6 @@ class AWAInterface:
         #If it is timed out, then just download and return whatever image available 
         #In order to avoid the complication of TCP buffer cleanup
         #we will simply close the connection and reopen it
-        self.m_CameraClient.close();
-        self.m_CameraClient = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.m_CameraClient.connect(("127.0.0.1",self.m_CameraPort))        
-        self.m_CameraClient.setblocking(0)
         NShots=0
         self.img={}
         self.FWHMX=np.empty((NSamples, 1))
@@ -77,6 +82,12 @@ class AWAInterface:
         self.FWHML=np.empty((NSamples, 1))
         self.CentroidX=np.empty((NSamples, 1))
         self.CentroidY=np.empty((NSamples, 1))
+        if(self.Testing==True):
+            return [0]
+        self.m_CameraClient.close();
+        self.m_CameraClient = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.m_CameraClient.connect(("127.0.0.1",self.m_CameraPort))        
+        self.m_CameraClient.setblocking(0)
 
         while (NShots<NSamples): 
             ready = select.select([self.m_CameraClient], [], [], 2)
@@ -105,11 +116,25 @@ class AWAInterface:
          #power supply control settings are -10.0 to 10.0
          #for full dynamic range for bipolar PS.
          #
-         set_beamline(channels,setvals)
+         self.set_beamline(channels,setvals)
          
     def set_beamline(self, pvnames,pvvals):
         assert len(pvnames) == len(pvvals)
+        self.TempVal=pvvals
+        
+        if(self.Testing==True):
+            return
         for i in range(len(pvnames)):
             caput(pvnames[i], pvvals[i])
             logging.info(f'caput {pvnames[i]} {pvvals[i]}')
-        logging.info(f'set_beamline called')
+        logging.info('set_beamline called')
+        
+    def test(self, NSamples):
+        self.GetNewImage(NSamples)
+        NShots=0
+        r=np.sin(self.TempVal)
+        while (NShots<NSamples):
+            self.FWHMX[NShots] = sum(r)
+            self.FWHMY[NShots] = r[0]
+            NShots += 1
+        return self.FWHMY

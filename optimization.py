@@ -41,19 +41,22 @@ class SingleObjectiveBayesian:
              If True minimize the objective, otherwise maximize
 
         '''
+        pkey=list(parameters.keys())
         
-        assert isinstance(parameters[0], parameter.Parameter)
+        assert isinstance(parameters[pkey[0]], parameter.Parameter)
         assert isinstance(objective, observations.Observation)
         
         self.parameters = parameters
         self.objective = objective
         self.controller = controller
 
-        self.parameter_names = [p.name for p in parameters]
+        #self.parameter_names = [p.name for p in parameters]
+        self.parameter_names = list(self.parameters.keys())
         self.n_parameters = len(self.parameters)
 
         
         #check if data is available
+        #Data won't be available until observe of ctrl has been called.
         X, f = self.get_data()
         #contruct a GP model
         self.gp = SingleTaskGP(X,f)
@@ -61,13 +64,20 @@ class SingleObjectiveBayesian:
         self.beta = kwargs.get('beta',0.1)
 
     def optimize(self, n_steps = 10, n_samples = 5):
-        for i in range(10):
+        b1=self.parameters[self.parameter_names[0]].bounds
+        b2=self.parameters[self.parameter_names[1]].bounds
+        d1=b1[1]-b1[0]
+        d2=b2[1]-b2[0]
+        for i in range(n_steps):
             #get candidate for observation
             candidate = self.max_acqf()
 
             #unnormalize
-            candidate = utils.unnormalize(candidate, self.parameters)
-            
+            #candidate = utils.unnormalize(candidate, self.parameters)
+            candidate[0][0] *= d1
+            candidate[0][1] *= d2
+            candidate[0][0] += b1[0]
+            candidate[0][1] += b2[0]
             #set parameters
             self.controller.set_parameters(candidate.flatten(), self.parameter_names)
 
@@ -99,7 +109,7 @@ class SingleObjectiveBayesian:
                                          self.gp)
         fit_gpytorch_model(mll)
         
-    def get_data(self, normalize = True):
+    def get_data(self, normalize = False):
         '''
         return numpy array with observations and convert to torch
         Note: by default input parameters are normalized from 0 to 1
@@ -109,10 +119,14 @@ class SingleObjectiveBayesian:
 
         '''
 
-        f = self.controller.observation_data[self.objective.name]
-        X = self.controller.observation_data[
-            [p.name for p in self.parameters]]
+        f = self.controller.data[self.objective.name]
+        #X = self.controller.data[
+        #    [p.name for p in self.parameters]]
+        X = self.controller.data[
+            [p for p in self.parameter_names]]
 
+#        X = torch.Tensor(X.to_numpy())
+        print(X)
         X = torch.Tensor(X.to_numpy())
         f = torch.Tensor(f.to_numpy())
 

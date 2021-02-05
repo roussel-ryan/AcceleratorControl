@@ -1,4 +1,5 @@
 import transformer
+import torch
 
 class OutOfBoundsError(Exception):
     pass
@@ -22,4 +23,4 @@ def unnormalize(x, parameters):
     
     #create bounds tensor
     bounds = torch.cat([p.bounds for p in parameters])
-    return b_utils.transforms.unnormalize(x, bounds)    
+    return transforms.unnormalize(x, bounds)    

@@ -34,7 +34,7 @@ class AWAController:
         if not self.testing:
             self.interface = accelerator_interface.AWAInterface()
         else:
-            self.interface = None
+            self.interface = accelerator_interface.AWAInterface(True,True)
             
         
         self.data = pd.DataFrame(np.zeros((1, self.n_parameters)),
@@ -65,13 +65,15 @@ class AWAController:
 #            values[i] = obs(self)
 #            time.sleep(wait_time)
 
-        state = self.data[self.parameter_names].tail(1)
+        state = self.new_state
         tarray = np.vstack([state.to_numpy() for i in range(n_samples)])
         tarray = np.hstack([tarray, values.reshape(n_samples,1)])
         temp_df = pd.DataFrame(data = tarray,
                                columns =  self.parameter_names + [obs.name])
-            
-        self.data = pd.concat([self.data,temp_df],
+        if(self.data.size<len(self.parameter_names)+1):
+            self.data=temp_df
+        else:
+            self.data = pd.concat([self.data,temp_df],
                               ignore_index = True)
             
         return values
@@ -99,20 +101,30 @@ class AWAController:
         try:
             for x_val, p in zip(x, parameters):
                 utils.check_bounds(x_val,p)
-                
             if not self.testing:
                 #self.interface.set_parameters(x,[p.channel for p in parameters])
+                self.logger.info(f'setting parameters {parameter_names} to values {x}') 
+
                 self.interface.set_beamline([p.channel for p in parameters],x)
-        
+            else:
+                self.logger.info(f'Test: setting parameters {parameter_names} to values {x}') 
+                self.interface.set_beamline([p.channel for p in parameters],x)
             time.sleep(self.wait_time)
 
             #append new state to data
+            #The following part of code will cause one extra rows with NAN for observation
+            '''
             new_state = self.data[self.parameter_names].tail(1).copy(deep = True)
             for p, val in zip(parameters, x):
                 new_state[p.name] = val
 
             self.data = pd.concat([self.data, new_state], ignore_index = True)
+            '''
+            self.new_state = self.data[self.parameter_names].tail(1).copy(deep = True)
+            for p, val in zip(parameters, x):
+                self.new_state[p.name] = float(val)
 
+            #self.data = pd.concat([self.data, new_state], ignore_index = True)
         except utils.OutOfBoundsError:
             logging.warning('Out of parameter bounds!')
             
