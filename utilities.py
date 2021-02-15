@@ -1,8 +1,6 @@
 import transformer
 import torch
 
-class OutOfBoundsError(Exception):
-    pass
 
 def check_bounds(x, parameter):
     #check if x is inside parameter bounds

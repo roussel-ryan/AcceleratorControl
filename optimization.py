@@ -14,6 +14,23 @@ from gpytorch.mlls import ExactMarginalLogLikelihood
 from botorch.acquisition import UpperConfidenceBound
 from botorch.optim import optimize_acqf
 
+def do_scan(self, parameter_name, lower, upper, obs):
+    '''
+    1D scan of a parameter with one observation
+    '''
+
+    n_steps = self.config.get('scan_steps',5)
+    n_samples = self.config.get('samples', 5)
+        
+    self.logger.info(f'starting scan of {parameter_name}'\
+                     'with {n_steps} steps and {n_samples}'\
+                     'samples per step')
+
+    X = np.linspace(lower, upper, n_steps).reshape(-1,1)
+    
+    for x in X:
+        self.set_parameters(x, [parameter_name])
+        self.observe(obs, n_samples)
 
 
 class SingleObjectiveBayesian:

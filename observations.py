@@ -4,7 +4,7 @@ import os
 import time
 import h5py
 
-import image_processing as ip
+#import image_processing as ip
 
 
 class Observation:

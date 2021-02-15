@@ -31,7 +31,7 @@ image_save = observations.ImageSave('pics')
 
 c = controller.AWAController('test.json',True)
 
-c.set_parameters(np.array((3,4)),['FocusingSolenoid', 'BuckingSolenoid'])
+c.set_parameters(np.array((3,7.0)),['FocusingSolenoid', 'BuckingSolenoid'])
 #c.do_scan('FocusingSolenoid', 20, 50, obs)
 c.observe(obs, 5)
 

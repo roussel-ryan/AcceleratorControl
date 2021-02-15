@@ -122,17 +122,17 @@ class AWAInterface:
          
     def set_beamline(self, params, pvvals):
         assert len(params) == len(pvvals)
-        self.TempVal=pvvals
-
+        
         #check if param values are safe
         for i in range(len(params)):
-            params[i].check_param_val(pvvals[i])
+            params[i].check_param_value(pvvals[i])
         
         if(self.Testing==True):
+            self.TempVal = pvvals
             return
         
         for i in range(len(params)):
-            caput(params[i].name, pvvals[i])
+            caput(params[i].channel, pvvals[i])
             logging.info(f'caput {params[i].name} {pvvals[i]}')
         logging.info('set_beamline called')
         

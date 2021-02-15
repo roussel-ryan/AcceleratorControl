@@ -1,12 +1,18 @@
 import numpy as np
 import json
 
+class OutOfBoundsError(Exception):
+    pass
+
 class Parameter:
     def __init__(self, name, channel, bounds):
         self.name = name
         self.channel = channel
         self.bounds = bounds
 
+    def check_param_value(self, val):
+        if not (self.bounds[0] <= val and val <= self.bounds[1]):
+            raise OutOfBoundsError(f'Parameter value {val} outside bounds for {self.name} : {self.bounds}')
     
         
 def import_parameters(param_list):
