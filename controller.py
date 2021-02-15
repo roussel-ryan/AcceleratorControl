@@ -62,9 +62,12 @@ class AWAController:
                               ignore_index = True)
             
         return values
+
+    def get_parameters(self, names):
+        return [self.parameters[name] for name in names]
     
-            
-    def set_parameters(self, x, parameter_names):
+    
+    def set_parameters(self, parameters, x):
         '''
         set parameter values based on input x
         
@@ -77,10 +80,13 @@ class AWAController:
             List of Parameter objects
 
         '''
-        assert x.shape[0] == len(parameter_names)
-        self.logger.info(f'setting parameters {parameter_names} to values {x}') 
+        #data type checking
+        assert x.shape[0] == len(parameters)
+        for param in parameters:
+            assert isinstance(param, parameter.Parameter)
 
-        parameters = [self.parameters[name] for name in parameter_names]
+            
+        parameter_names = [param.name for param in parameters]
 
         if not self.testing:
             self.logger.info(

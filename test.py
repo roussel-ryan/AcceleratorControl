@@ -3,7 +3,7 @@ import logging
 import torch
 import controller
 import observations
-import optimization
+import sobo
 
 def main():
     logging.basicConfig(level=logging.INFO)
@@ -31,13 +31,13 @@ image_save = observations.ImageSave('pics')
 
 c = controller.AWAController('test.json',True)
 
-c.set_parameters(np.array((3,7.0)),['FocusingSolenoid', 'BuckingSolenoid'])
+opt_params = c.get_parameters(['FocusingSolenoid', 'BuckingSolenoid'])
+c.set_parameters(opt_params, np.array((3,4.0)))
 #c.do_scan('FocusingSolenoid', 20, 50, obs)
-c.observe(obs, 5)
+c.observe(obs, 2)
 
-opt_params = c.parameters
 opt_obj = obs
-opt = optimization.SingleObjectiveBayesian(opt_params, opt_obj, c, beta = 2.0)
+opt = sobo.SingleObjectiveBayesian(opt_params, opt_obj, c, beta = 2.0)
 opt.optimize(15,1)
 #opt.optimize()
 
