@@ -2,12 +2,11 @@ import numpy as np
 import torch
 import logging
 
-import parameter
-import observations
-import utilities as utils
-import transformer
+from . import parameter
+from . import observations
+from . import transformer
 
-from botorch.models import SingleTaskGP
+from botorch.models import SingleTaskGP, FixedNoiseGP
 from botorch.fit import fit_gpytorch_model
 from gpytorch.mlls import ExactMarginalLogLikelihood
 
@@ -15,8 +14,6 @@ from botorch.acquisition.multi_objective.analytic import ExpectedHypervolumeImpr
 from botorch.utils.multi_objective.box_decomposition import NondominatedPartitioning
 from botorch.optim import optimize_acqf
 from botorch import settings
-
-
 
 class MultiObjectiveBayesian:
     '''
@@ -62,20 +59,26 @@ class MultiObjectiveBayesian:
         #Data won't be available until observe of ctrl has been called.
         self.X, self.f = self.get_data()
 
-        #contruct a GP model
-        self.gp = SingleTaskGP(self.X,self.f)
+        #contruct a GP model - Matern kernel w/ nu = 2.5 and ARD, GammaPriors on lengthscales and output scales
+        #note: pass a custom kernel via the covar_module argument
+        #note: objectives are multiplied by -1 to do minimization
+        self.gp = SingleTaskGP(self.X, self.f)
 
         
     def optimize(self, n_steps = 10, n_samples = 5):
         for i in range(n_steps):
-            #get candidate for observation
-            candidate = self.max_acqf()
+            
+            #get candidate for observation and unnormalize
+            candidate = self.max_acqf().numpy().flatten()
+            unnormed_candidate = np.zeros_like(candidate)
+            for i in range(self.n_parameters):
+                unnormed_candidate[i] = self.parameters[i].transformer.backward(candidate[i].reshape(1,1))
 
             #unnormalize candidate
-            candidate = self.controller.tx.backward(candidate.numpy().reshape(1,-1))
+            #candidate = self.controller.tx.backward(candidate.numpy().reshape(1,-1))
             
             #set parameters
-            self.controller.set_parameters(self.parameters, candidate.flatten())
+            self.controller.set_parameters(self.parameters, unnormed_candidate.astype(np.float32))
 
             #make observations necessary (possibly multiple measurements)
             #note: some measurements (test measurements, screen measurements) can be made simultaneously
@@ -103,7 +106,7 @@ class MultiObjectiveBayesian:
     def max_acqf(self):
         #finds new canidate point based on EHVI acquisition function
         partitioning = NondominatedPartitioning(2, Y = self.f)
-        EHVI = ExpectedHypervolumeImprovement(self.gp, torch.tensor((0,0)),partitioning)
+        EHVI = ExpectedHypervolumeImprovement(self.gp, -1.0 * torch.ones(2), partitioning)
 
         bounds = torch.stack([torch.zeros(self.n_parameters),
                               torch.ones(self.n_parameters)])
@@ -129,21 +132,25 @@ class MultiObjectiveBayesian:
 
         '''
         data = self.controller.data.fillna(-np.inf).groupby(['state_idx']).max()
-
-
         
-        f = data[
-            [obj.name for obj in self.objectives]].to_numpy().reshape(-1,self.n_objectives)
+        f = data[[obj.name for obj in self.objectives]]
+        f = f.to_numpy()
         X = data[[p.name for p in self.parameters]].to_numpy()
         
         if normalize:
             #standardize f
             tf = transformer.Transformer(f)
             f = tf.forward(f)
-            X = self.controller.tx.forward(X)
+
+            #normalize each input vector
+            X_normed = np.zeros_like(X)
+            for i in range(self.n_parameters):
+                X_normed[:,i] = self.parameters[i].transformer.forward(X[:,i].reshape(-1,1)).flatten()
+            
+            #X = self.controller.tx.forward(X)
         
-        X = torch.from_numpy(X)
-        f = torch.from_numpy(f)
+        X = torch.from_numpy(X_normed)
+        f = -1 * torch.from_numpy(f)
 
             
         return X, f

@@ -1,10 +1,11 @@
 import numpy as np
 import logging
 import torch
-import controller
-import observations
-import sobo
-import mobo
+from . import controller
+from . import observations
+from . import sobo
+from . import mobo
+from . import interface
 
 import matplotlib.pyplot as plt
 
@@ -12,8 +13,10 @@ def main():
     logging.basicConfig(level=logging.INFO)
     obs = observations.Observation("obs1")
     image_save = observations.ImageSave('pics')
-    
-    c = controller.AWAController('test.json',Testing=True)
+
+    #define interface and controller
+    interf = interface.AWAInterface(True, True)
+    c = controller.AWAController('test.json', interf)
 
     c.set_parameters(torch.Tensor(np.array((3,4))),['FocusingSolenoid', 'BuckingSolenoid'])
     #c.do_scan('FocusingSolenoid', 20, 50, obs)

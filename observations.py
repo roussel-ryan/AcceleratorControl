@@ -37,7 +37,7 @@ class Observation:
         self.is_child = True
         self.parent = parent
             
-        self.name = '.'.join((self.parent.name, self.name))
+        #self.name = '.'.join((self.parent.name, self.name))
         
     def __call__(self, controller):
         '''
@@ -62,9 +62,17 @@ class GroupObservation:
     - child observation name is <parent name>.<child name>
 
     '''
-    def __init__(self, name):
+    def __init__(self, name, output_names):
         self.name = name
         self.children = []
+
+        self.output_names = output_names
+
+        #add children observations
+        for name in self.output_names:
+            obs = Observation(name)
+            self.add_child(obs)
+        
         
     def __call__(self, controller):
         raise NotImplementedError
@@ -80,13 +88,7 @@ class GroupObservation:
         
 class AWABeamSize(GroupObservation):
     def __init__(self):
-        self.output_names = ['CX', 'CY', 'FWHMX', 'FWHMY'] 
-        super().__init__('AWABeamSize')
-
-        #add children observations
-        for name in self.output_names:
-            obs = Observation(name)
-            self.add_child(obs)
+        super().__init__('AWABeamSize', ['CX', 'CY', 'FWHMX', 'FWHMY'])
         
     def __call__(self, controller):
         #self.img = controller.interface.GetNewImage(nsamples)

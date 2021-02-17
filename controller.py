@@ -8,13 +8,12 @@ import pandas as pd
 
 import ScreenTools
 
-import accelerator_interface
-import observations
-import parameter
-import utilities as utils
-import transformer
+from . import interface
+from . import observations
+from . import parameter
+from . import transformer
 
-class AWAController:
+class Controller:
     '''
     Controller class that directs measurements, parameter settings and 
     observation routines. Also stores measured values in a dataframe that 
@@ -22,19 +21,22 @@ class AWAController:
 
     '''
 
-    def __init__(self, config_fname, testing = False):
+    def __init__(self, config_fname, interface = interface.TestInterface()):
         self.logger = logging.getLogger()
 
             
         #import configuration settings from json file
         self._import_config(config_fname)
-
+        
+        
         #create accelerator interface object if we are not testing
-        self.testing = testing
-        if not self.testing:
-            self.interface = accelerator_interface.AWAInterface()
-        else:
-            self.interface = accelerator_interface.AWAInterface(True,True)
+        self.interface = interface
+
+        #self.testing = testing
+        #if not self.testing:
+        #    self.interface = interface.AWAInterface()
+        #else:
+        #    self.interface = interface.AWAInterface(True,True)
             
         
         #self.data.astype({'state_idx':'int32', 'time':'int32'},copy = False)
@@ -45,7 +47,9 @@ class AWAController:
         #do observation and merge results with last input parameter state
         results = []
         for i in range(n_samples):
-            results += [pd.concat([self.new_state.reset_index(drop=True), obs(self)], axis = 1)] 
+            results += [pd.concat([self.new_state.reset_index(drop=True),
+                                   obs(self)],
+                                  axis = 1)] 
 
         #state = self.new_state
         #tarray = np.vstack([state.to_numpy() for i in range(n_samples)])
@@ -57,15 +61,13 @@ class AWAController:
         
 
         try:
-            self.data = pd.concat([self.data, temp_df],
-                                  ignore_index = True)
+            self.data = pd.concat([self.data, temp_df], ignore_index = True)
 
         except AttributeError:
             self.data = temp_df
-        #return values
 
-    def get_parameters(self, names):
-        return [self.parameters[name] for name in names]
+    def get_named_parameters(self, names):
+        return [self.parameters[self.parameter_key[name]] for name in names]
     
     
     def set_parameters(self, parameters, x):
@@ -81,33 +83,25 @@ class AWAController:
             List of Parameter objects
 
         '''
-        #data type checking
+        #data type checking and make sure we are in bounds
         assert x.shape[0] == len(parameters)
-        for param in parameters:
-            assert isinstance(param, parameter.Parameter)
-
+        for i in range(len(parameters)):
+            assert isinstance(parameters[i], parameter.Parameter), f'{param} is type {type(param)}, not type parameter'
+            parameters[i].check_param_value(x[i])
+        
+            
             
         parameter_names = [param.name for param in parameters]
 
-        if not self.testing:
-            self.logger.info(
+        self.logger.info(
                 f'setting parameters {parameter_names} to values {x}') 
 
-            self.interface.set_beamline(parameters,x)
-            
-        else:
-            self.logger.info(
-                f'Test: setting parameters {parameter_names}'\
-                f' to values {x}')
-                
-            self.interface.set_beamline(parameters, x)
-                
+        self.interface.set_beamline(parameters,x)        
         time.sleep(self.wait_time)
 
 
         try:
             self.new_state = self.data[self.parameter_names + ['state_idx']].tail(1).copy(deep = True)
-            print(self.new_state)
 
         except AttributeError:
             self.new_state = pd.DataFrame(np.zeros((1, self.n_parameters + 2)),
@@ -125,9 +119,11 @@ class AWAController:
         with open(fname) as f:
             self.config = json.load(f)
 
-        parameters_list = parameter.import_parameters(self.config['parameters'])
-        self.parameters = {p.name : p for p in parameters_list}
-        self.parameter_names = list(self.parameters.keys())
+        self.parameters = parameter.import_parameters(self.config['parameters'])
+        n_params = len(self.parameters)
+        self.parameter_key = {p.name : i for i,p in zip(np.arange(n_params),
+                                                        self.parameters)}
+        self.parameter_names = [param.name for param in self.parameters]
 
         self.logger.info(f'Imported parameters {self.parameter_names}')
         self.n_parameters = len(self.parameter_names)
@@ -135,8 +131,8 @@ class AWAController:
         self.wait_time = self.config.get('wait_time',2.0)
 
         #get normalization for each parameter
-        x = np.hstack([self.parameters[ele].bounds.reshape(2,1) for ele in self.parameter_names])
-        self.tx = transformer.Transformer(x)
+        #x = np.hstack([param.bounds.reshape(2,1) for param in self.parameters])
+        #self.tx = transformer.Transformer(x)
 
     def group_data(self):
         return self.data.fillna(-np.inf).groupby(['state_idx']).max()
