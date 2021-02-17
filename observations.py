@@ -3,7 +3,7 @@ import torch
 import os
 import time
 import h5py
-
+import pandas as pd
 #import image_processing as ip
 
 
@@ -16,45 +16,110 @@ class Observation:
 
     name : string
     
-    func : callable
-         Observation function f(accelerator_interface.AWAInterface) that returns 
-              a given measurement
+    outputs : int
+         Number of scalar outputs from measurement
 
     '''
     
-    def __init__(self, name):
+    def __init__(self, name, parent = None):
         self.name = name
-
-    def __call__(self, controller,nsamples):
+        self.is_child = False
+        
+    def add_parent(self, parent):
+        self.is_child = True
+        self.parent = parent
+            
+        self.name = '.'.join((self.parent.name, self.name))
+        
+    def __call__(self, controller):
         '''
         do observation
 
         Arguments
         ---------
-
-        interface : 
+        controller : controller.Controller object
+        nsamples : number of samples to take
+ 
         '''
-        #raise NotImplementedError
-        if controller.testing:
-            return controller.interface.test(nsamples)
+        if self.is_child:
+            return self.parent()
         else:
-            self.img=controller.interface.GetNewImage(nsamples)
-            self.cx=controller.interface.CentroidX
-            self.cy=controller.interface.CentroidY
-            self.fwhmx=controller.interface.FWHMX 
-            self.fwhmy=controller.interface.FWHMY 
-            #self.radius=np.sqrt(self.fwhmx*self.fwhmy)
-            self.radius=self.fwhmx+self.fwhmy
-            #return ip.measurespot(img,(cx,cy),radius)
-            return self.radius
+            raise NotImplementedError
 
-# class Test(Observation):
-#     def __init__(self):
-#         super().__init__('TestObservation')
+class GroupObservation:
+    ''' 
+    group class for when multiple observations can be made simultaneously 
+    (for example multiple aspects of the beam can be measured at once w/ an image)
+    - when a child observation is called the parent observation should be called instead
+    - child observation name should be named <parent name>.<child name>
 
-#     def __call__(self, controller):
-#         return torch.randn(1)
+    '''
+    def __init__(self, name):
+        self.name = name
+        self.children = []
         
+    def __call__(self, controller):
+        raise NotImplementedError
+
+    def add_child(self, child):
+        child.add_parent(self)
+        self.children += [child]
+    
+    def get_children_names(self):
+        return [child.name for child in self.children]
+
+    
+        
+class AWABeamSize(GroupObservation):
+    def __init__(self):
+        self.output_names = ['CX', 'CY', 'FWHMX', 'FWHMY'] 
+        super().__init__('AWABeamSize')
+
+        #add children observations
+        for name in self.output_names:
+            obs = Observation(name)
+            self.add_child(obs)
+        
+    def __call__(self, controller):
+        #self.img = controller.interface.GetNewImage(nsamples)
+        cx = controller.interface.CentroidX
+        cy = controller.interface.CentroidY
+        fwhmx = controller.interface.FWHMX 
+        fwhmy = controller.interface.FWHMY 
+        #self.radius=np.sqrt(self.fwhmx*self.fwhmy)
+        
+
+        return pd.DataFrame(data = np.array([cx, cy, fwhmx, fwhmy]),
+                            columns = self.output_names)
+                         
+        
+class TestSOBO(Observation):
+    '''observation class used for testing SOBO algorithm'''
+    def __init__(self, name = 'TestSOBO'):
+        super().__init__(name)
+
+    def __call__(self, controller):
+        val = controller.interface.test_sobo().reshape(1,1)
+        return pd.DataFrame(val,
+                            columns = [self.name])
+        
+class TestMOBO(GroupObservation):
+    '''observation class used for testing MOBO algorithm'''
+    def __init__(self, name = 'TestMOBO'):
+        self.output_names = ['1','2']
+        super().__init__(name)
+
+        #add children observations
+        for name in self.output_names:
+            obs = Observation(name)
+            self.add_child(obs)
+
+    def __call__(self, controller):
+        vals = controller.interface.test_mobo()
+        return pd.DataFrame(np.array(vals).reshape(1,-1),
+                            columns = self.get_children_names())
+        
+     
 # class RMSBeamSizeX(Observation):
 #     def __init__(self, screen_center, screen_radius):
 #         self.screen_center = screen_center

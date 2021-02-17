@@ -72,6 +72,7 @@ class AWAInterface:
                 return np.array(self.AWAPGCamera.GetImage())
         else:
             return 0
+        
     def GetNewImage(self, NSamples):
         #Connect to camera broadcasting TCP port for notifications
         #If it is timed out, then just download and return whatever image available 
@@ -136,12 +137,19 @@ class AWAInterface:
             logging.info(f'caput {params[i].name} {pvvals[i]}')
         logging.info('set_beamline called')
         
-    def test(self, NSamples):
-        self.GetNewImage(NSamples)
-        NShots = 0
+    def test_sobo(self):
         r = np.sin(self.TempVal)
-        while (NShots < NSamples):
-            self.FWHMX[NShots] = sum(r)
-            self.FWHMY[NShots] = r[0]
-            NShots += 1
-        return self.FWHMX
+        return np.sum(r)
+
+    def test_mobo(self):
+        x = self.TempVal
+        D = 2
+        f1 = x[0]  # objective 1
+        g = 1 + 9 * np.sum(x[1:D] / (D-1))
+        h = 1 - np.sqrt(f1 / g)
+        f2 = g * h  # objective 2
+
+        #note: botorch assumes maximization
+        return -1*np.array([f1, f2])
+        
+        

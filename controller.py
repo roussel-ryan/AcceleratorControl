@@ -37,31 +37,32 @@ class AWAController:
             self.interface = accelerator_interface.AWAInterface(True,True)
             
         
-        self.data = pd.DataFrame(np.zeros((1, self.n_parameters)),
-                                 columns = self.parameter_names)        
-        
-    
-    def observe(self, obs, n_samples, **kwargs):
- #       wait_time = kwargs.get('wait_time', self.wait_time)
-        
-        values = np.empty((n_samples, 1))
-        values = obs(self,n_samples)
-#       for i in range(n_samples):
-#            values[i] = obs(self)
-#            time.sleep(wait_time)
-
-        state = self.new_state
-        tarray = np.vstack([state.to_numpy() for i in range(n_samples)])
-        tarray = np.hstack([tarray, values.reshape(n_samples,1)])
-        temp_df = pd.DataFrame(data = tarray,
-                               columns =  self.parameter_names + [obs.name])
-        if(self.data.size<len(self.parameter_names)+1):
-            self.data=temp_df
-        else:
-            self.data = pd.concat([self.data,temp_df],
-                              ignore_index = True)
+        #self.data.astype({'state_idx':'int32', 'time':'int32'},copy = False)
             
-        return values
+    def observe(self, obs, n_samples = 1, **kwargs):
+        wait_time = kwargs.get('wait_time', self.wait_time)
+        
+        #do observation and merge results with last input parameter state
+        results = []
+        for i in range(n_samples):
+            results += [pd.concat([self.new_state.reset_index(drop=True), obs(self)], axis = 1)] 
+
+        #state = self.new_state
+        #tarray = np.vstack([state.to_numpy() for i in range(n_samples)])
+        #tarray = np.hstack([tarray, values])
+        #temp_df = pd.DataFrame(data = tarray,
+        #                       columns =  self.parameter_names + obs.output_names)
+        temp_df = pd.concat(results, ignore_index = True)
+        temp_df['time'] = time.time()
+        
+
+        try:
+            self.data = pd.concat([self.data, temp_df],
+                                  ignore_index = True)
+
+        except AttributeError:
+            self.data = temp_df
+        #return values
 
     def get_parameters(self, names):
         return [self.parameters[name] for name in names]
@@ -103,19 +104,20 @@ class AWAController:
                 
         time.sleep(self.wait_time)
 
-        #append new state to data
-        #The following part of code will cause one extra rows with NAN for observation
-        '''
-        new_state = self.data[self.parameter_names].tail(1).copy(deep = True)
-        for p, val in zip(parameters, x):
-        new_state[p.name] = val
+
+        try:
+            self.new_state = self.data[self.parameter_names + ['state_idx']].tail(1).copy(deep = True)
+            print(self.new_state)
+
+        except AttributeError:
+            self.new_state = pd.DataFrame(np.zeros((1, self.n_parameters + 2)),
+                                 columns = self.parameter_names + ['state_idx','time'])        
         
-        self.data = pd.concat([self.data, new_state], ignore_index = True)
-        '''
-        self.new_state = self.data[self.parameter_names].tail(1).copy(deep = True)
+
         for p, val in zip(parameters, x):
             self.new_state[p.name] = float(val)
-
+        self.new_state['state_idx'] = self.new_state['state_idx'] + 1
+            
         #self.data = pd.concat([self.data, new_state], ignore_index = True)
             
 
@@ -135,6 +137,10 @@ class AWAController:
         #get normalization for each parameter
         x = np.hstack([self.parameters[ele].bounds.reshape(2,1) for ele in self.parameter_names])
         self.tx = transformer.Transformer(x)
+
+    def group_data(self):
+        return self.data.fillna(-np.inf).groupby(['state_idx']).max()
+
         
     def reset(self):
         raise NotImplementedError
