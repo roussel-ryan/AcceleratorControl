@@ -9,19 +9,27 @@ import pandas as pd
 
 class Observation:
     '''
-    Observation function class that keeps track of function name and callable
+    Observation function class that keeps track of function name and callable 
+    function to do the observation.
+    
+    If this observation can be made simultaneously with other observations using the same process 
+    pass it to a GroupObservation.add_child(). By default a observation has no parent =(.
+    An example of a simultaneous observation is getting the x and y beamsize from a single image.
+
+    If is_child is true, calls to this observation will execute the group callable method instead. 
+    This is done so that optimizers can call individual observations while still collecting 
+    excess data during optimization. 
+
+    For use, overwrite __call__().
+    Observation callables return a pandas DataFrame object with column names = to observation name.
     
     Arguments
     ---------
-
     name : string
-    
-    outputs : int
-         Number of scalar outputs from measurement
 
     '''
     
-    def __init__(self, name, parent = None):
+    def __init__(self, name):
         self.name = name
         self.is_child = False
         
@@ -50,8 +58,8 @@ class GroupObservation:
     ''' 
     group class for when multiple observations can be made simultaneously 
     (for example multiple aspects of the beam can be measured at once w/ an image)
-    - when a child observation is called the parent observation should be called instead
-    - child observation name should be named <parent name>.<child name>
+    - when a child observation is called the parent observation is called instead
+    - child observation name is <parent name>.<child name>
 
     '''
     def __init__(self, name):

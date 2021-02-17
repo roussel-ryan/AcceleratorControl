@@ -9,8 +9,38 @@ import select
 from epics import caget, caput, cainfo
 import logging
 
+class AcceleratorInterface:
+    '''
+    low level interface class used to communicate with the accelerator
 
-class AWAInterface:
+    - should impliment the following via overwriting
+        - __init__() method to establish connections to control computer
+        - set_beamline() method to send PV's to pyEPICS et. al.
+    - due to the complex nature of custom observations please define a specific observation class to
+      get measurements, feel free to define methods here to do so
+
+    '''
+    def __init__(self):
+        '''establish connections here'''
+        raise NotImplementedError
+
+    def set_beamline(self, params, pvals):
+        '''
+        set beamline PV's here
+        
+        Arguments
+        ---------
+        params : list
+            List of parameter objects (see parameter.py)
+
+        pvals : ndarray
+            Array of parameter set points (unnormalized) 
+
+        '''
+        raise NotImplementedError
+
+
+class AWAInterface(AcceleratorInterface):
     UseNIFG = False
     Initialized = False
     m_CameraClient = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -25,10 +55,11 @@ class AWAInterface:
     Testing = False
 
     
-    def __init__(self,UseFrameGrabber=True,Testing=False):
+    def __init__(self,UseFrameGrabber=True, Testing=False):
         self.Testing = Testing
         self.initialize_connections(UseFrameGrabber)
-
+        super().__init__()
+        
     def initialize_connections(self,UseFrameGrabber):
         #image client
         
