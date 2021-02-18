@@ -1,10 +1,5 @@
 import numpy as np
 import time
-import socket
-import numpy as np
-import pythoncom
-from win32com import client
-import select
 
 import epics
 import logging
