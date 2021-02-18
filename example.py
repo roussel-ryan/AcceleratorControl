@@ -7,8 +7,14 @@ def main():
     interf = interface.SLACInterface()
     c = controller.Controller('config.json', interf)
 
-    #initial setpoint
-    initial = 1.0
+    #get initial setpoint (set to minimum bound for each parameter as example
+    initial = np.zeros(len(c.parameters))
+    for i in range(len(initial)):
+        initial[i] = c.parameters[i].bounds[0]
+
+    print([param.name for param in c.parameters])
+    print(initial)
+        
     c.set_parameters(c.parameters, initial)
     
     xy_observation = observations.OTR2Profiles(measure_z = False)
@@ -32,7 +38,7 @@ def main():
     #sample initial points
     for pt in initial_pts:
         c.set_parameters(obj_params, pt)
-        c.observe(xyz_observation)
+        c.observe(xyz_observation, 5)
 
     print(c.data)
         
