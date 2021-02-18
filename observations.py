@@ -84,24 +84,44 @@ class GroupObservation:
     def get_children_names(self):
         return [child.name for child in self.children]
 
-    
-        
-class AWABeamSize(GroupObservation):
-    def __init__(self):
-        super().__init__('AWABeamSize', ['CX', 'CY', 'FWHMX', 'FWHMY'])
-        
-    def __call__(self, controller):
-        #self.img = controller.interface.GetNewImage(nsamples)
-        cx = controller.interface.CentroidX
-        cy = controller.interface.CentroidY
-        fwhmx = controller.interface.FWHMX 
-        fwhmy = controller.interface.FWHMY 
-        #self.radius=np.sqrt(self.fwhmx*self.fwhmy)
-        
 
-        return pd.DataFrame(data = np.array([cx, cy, fwhmx, fwhmy]),
+class OTR2Profiles(GroupObservation):
+    def __init__(self, measure_z = True):
+        self.measure_z = measure_z
+        outputs = ['sigma_x','sigma_y']
+        if self.measure_z:
+            outputs += ['sigma_z']
+        
+        super().__init__('OTRProfiles', outputs)
+
+    def __call__(self, controller):
+        '''
+        do bunch length measurement, use TCAV off measurement to get xrms,yrms
+        - read 'OTRS:IN20:571:XRMS'
+        - set TCAV0 to ON (getting PV for this)
+        - read 'OTRS:IN20:571:XRMS' again
+        - set TCAV0 to OFF
+        '''
+        otr_base_pv = 'OTRS:IN20:571:'
+        xrms = controller.interface.get_PYs([otr_base_pv + 'XRMS'])
+        yrms = controller.interface.get_PYs([otr_base_pv + 'YRMS'])
+
+        if measure_z:
+            controller.interface.set_TCAV(1)
+            tcav_on_xrms = controller.interface.get_PYs([otr_base_pv + 'XRMS'])
+            controller.interface.set_TCAV(0)
+
+            #find quad difference to get rms bunch length
+            tcav_scale = 1.0 #convert rmsx size to time (units: m/s)
+
+            sigma_z = np.sqrt((tcav_on_xrms**2 - xrms**2) / tcav_scale**2)
+            results = np.array((sigma_x, sigma_y, sigma_z))
+        else:
+            results = np.array((sigma_x,sigma_y))
+            
+        return pd.DataFrame(data = results,
                             columns = self.output_names)
-                         
+        
         
 class TestSOBO(Observation):
     '''observation class used for testing SOBO algorithm'''
@@ -130,56 +150,4 @@ class TestMOBO(GroupObservation):
                             columns = self.get_children_names())
         
      
-# class RMSBeamSizeX(Observation):
-#     def __init__(self, screen_center, screen_radius):
-#         self.screen_center = screen_center
-#         self.screen_radius = screen_radius
-        
-#         super().__init__('RMSBeamSizeX')
-
-#     def __call__(self, controller):
-        
-        
-#         return torch.as_tensor((5.0)) + torch.rand(1)
-        
-
-class ImageSave(Observation):
-    '''
-    Saves image into h5 file with settings/time metadata
-    '''
-    
-    def __init__(self, folder, base_fname = 'image', camera_type = 'PG'):
-        if not os.path.exists(folder):
-            os.makedirs(folder)
-
-        self.folder = folder
-        self.base_fname = base_fname
-        self.camera_type = camera_type
-
-        super().__init__('ImageSave')
-        
-    def __call__(self, controller):
-        #get image using controller interface
-        if controller.testing:
-            image = np.ones((700,700))
-        else:
-#            image = controller.interface.get_image(self.camera_type)
-            image = controller.interface.GetImage()
-
-        fname = self.folder + '/' + self.base_fname + '_' + str(int(time.time())) + '.h5'
-
-        with h5py.File(fname,'w') as f:
-            dset = f.create_dataset('image', data = image)
-
-            cols = controller.parameter_names
-            vals = controller.data.tail(1).to_numpy()[0]
-            print(cols)
-            print(vals)
-            
-            for key, val in zip(cols, vals):
-                dset.attrs[key] = val
-
-        controller.logger.info(f'saved image to file: {fname}')
-        
-        return [True]
 
