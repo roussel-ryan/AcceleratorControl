@@ -13,7 +13,7 @@ sobo_obs = observations.TestSOBO()
 #image_save = observations.ImageSave('pics')
 
 
-c = controller.Controller('test.json', interface.TestInterface())
+c = controller.Controller('test.json', interface = interface.TestInterface())
 
 opt_params = c.get_named_parameters(['FocusingSolenoid', 'BuckingSolenoid'])
 
