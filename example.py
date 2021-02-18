@@ -1,4 +1,4 @@
-from . import controller, interface, observations, mobo
+from accelerator_control import controller, interface, observations, mobo
 import numpy as np
 
 def main():
@@ -8,7 +8,7 @@ def main():
     c = controller.Controller('config.json', interf)
 
     #initial setpoint
-    initial = ????
+    initial = 1.0
     c.set_parameters(c.parameters, initial)
     
     xy_observation = observations.OTR2Profiles(measure_z = False)

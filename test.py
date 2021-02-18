@@ -1,11 +1,7 @@
 import numpy as np
 import logging
 import torch
-from . import controller
-from . import observations
-from . import sobo
-from . import mobo
-from . import interface
+from accelerator_control import controller, observations, sobo, mobo, interface
 
 import matplotlib.pyplot as plt
 
