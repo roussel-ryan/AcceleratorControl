@@ -12,16 +12,22 @@ class Observation:
     Observation function class that keeps track of function name and callable 
     function to do the observation.
     
-    If this observation can be made simultaneously with other observations using the same process 
-    pass it to a GroupObservation.add_child(). By default a observation has no parent =(.
-    An example of a simultaneous observation is getting the x and y beamsize from a single image.
+    If this observation can be made simultaneously with other observations 
+    using the same process pass it to a GroupObservation.add_child(). 
+    By default a observation has no parent =(.
+    
+    An example of a simultaneous observation is getting the x and y beamsize 
+    from a single image.
 
-    If is_child is true, calls to this observation will execute the group callable method instead. 
-    This is done so that optimizers can call individual observations while still collecting 
-    excess data during optimization. 
+    If is_child is true, calls to this observation will execute the 
+    group callable method instead. 
+    
+    This is done so that optimizers can call individual observations while 
+    still passively collecting excess data during optimization. 
 
     For use, overwrite __call__().
-    Observation callables return a pandas DataFrame object with column names = to observation name.
+    Observation callables return a pandas DataFrame object with 
+    column names = to observation name.
     
     Arguments
     ---------
@@ -34,10 +40,11 @@ class Observation:
         self.is_child = False
         
     def add_parent(self, parent):
+        '''adds parent to observation -> self._call__ is not necessary'''
+        
         self.is_child = True
         self.parent = parent
             
-        #self.name = '.'.join((self.parent.name, self.name))
         
     def __call__(self, controller):
         '''
@@ -75,6 +82,12 @@ class GroupObservation:
         
         
     def __call__(self, controller):
+        '''
+        
+        impliments observation procedure, 
+        should return a pandas DataFrame object
+
+        '''
         raise NotImplementedError
 
     def add_child(self, child):
@@ -106,7 +119,7 @@ class OTR2Profiles(GroupObservation):
         xrms = controller.interface.get_PYs([otr_base_pv + 'XRMS'])
         yrms = controller.interface.get_PYs([otr_base_pv + 'YRMS'])
 
-        if measure_z:
+        if self.measure_z:
             controller.interface.set_TCAV(1)
             tcav_on_xrms = controller.interface.get_PYs([otr_base_pv + 'XRMS'])
             controller.interface.set_TCAV(0)
@@ -119,7 +132,7 @@ class OTR2Profiles(GroupObservation):
         else:
             results = np.array((sigma_x,sigma_y))
             
-        return pd.DataFrame(data = results,
+        return pd.DataFrame(data = results.reshape(1,-1),
                             columns = self.output_names)
         
         
@@ -129,25 +142,20 @@ class TestSOBO(Observation):
         super().__init__(name)
 
     def __call__(self, controller):
-        val = controller.interface.test_sobo().reshape(1,1)
-        return pd.DataFrame(val,
+        val = controller.interface.test_observation()
+        return pd.DataFrame(val[0].reshape(1,1),
                             columns = [self.name])
         
 class TestMOBO(GroupObservation):
     '''observation class used for testing MOBO algorithm'''
     def __init__(self, name = 'TestMOBO'):
-        self.output_names = ['1','2']
-        super().__init__(name)
-
-        #add children observations
-        for name in self.output_names:
-            obs = Observation(name)
-            self.add_child(obs)
+        output_names = ['1','2']
+        super().__init__(name, output_names)
 
     def __call__(self, controller):
-        vals = controller.interface.test_mobo()
-        return pd.DataFrame(np.array(vals).reshape(1,-1),
-                            columns = self.get_children_names())
+        vals = controller.interface.test_observation()
+        return pd.DataFrame(vals.reshape(1,-1),
+                            columns = self.output_names)
         
      
 

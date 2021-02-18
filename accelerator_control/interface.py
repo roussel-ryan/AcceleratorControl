@@ -59,3 +59,17 @@ class SLACInterface:
 class TestInterface(AcceleratorInterface):
     def __init__(self):
         pass
+
+    def set_beamline(self, params, pvvals):
+        assert len(params) == len(pvvals)
+        self.val = pvvals
+
+    def test_observation(self):
+        x = self.val
+        D = 2
+        f1 = x[0]  # objective 1
+        g = 1 + 9 * np.sum(x[1:D] / (D-1))
+        h = 1 - np.sqrt(f1 / g)
+        f2 = g * h  # objective 2
+
+        return np.array([f1, f2]) + np.random.rand(2)*0.01

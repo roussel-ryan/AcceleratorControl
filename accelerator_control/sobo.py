@@ -1,10 +1,9 @@
 import numpy as np
 import torch
 
-import parameter
-import observations
-import utilities as utils
-import transformer
+from . import parameter
+from . import observations
+from . import transformer
 
 from botorch.models import SingleTaskGP
 from botorch.fit import fit_gpytorch_model
