@@ -1,6 +1,6 @@
 import numpy as np
 import json
-import transformer
+from . import transformer
 
 class OutOfBoundsError(Exception):
     pass

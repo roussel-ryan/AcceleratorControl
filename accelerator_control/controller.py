@@ -6,8 +6,6 @@ import time
 import logging
 import pandas as pd
 
-import ScreenTools
-
 from . import interface
 from . import observations
 from . import parameter
