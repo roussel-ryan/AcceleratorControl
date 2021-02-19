@@ -5,6 +5,8 @@ import logging
 from . import parameter
 from . import observations
 from . import transformer
+from .bo import localized_ucb
+
 
 from botorch.models import SingleTaskGP, FixedNoiseGP
 from botorch.fit import fit_gpytorch_model
@@ -124,6 +126,7 @@ class MultiObjectiveBayesian:
         #finds new canidate point based on EHVI acquisition function
         partitioning = NondominatedPartitioning(2, Y = self.f)
         EHVI = ExpectedHypervolumeImprovement(self.gp, -1.0 * self.ref, partitioning)
+        #EHVI = localized_ucb.LocalizedEHVI(self.gp, -1.0 * self.ref, partitioning, 0.1*torch.eye(2))
 
         bounds = torch.stack([torch.zeros(self.n_parameters),
                               torch.ones(self.n_parameters)])

@@ -38,12 +38,15 @@ objs = [sobo_obs, mobo_obs.children[1]]
 #objs = mobo_obs.children
 ref = torch.tensor((1.0,5.0))
 opt = mobo.MultiObjectiveBayesian(opt_params, objs, c, ref) 
-opt.optimize(25,5)
+opt.optimize(10,1)
 print(c.data)
 
 #print(opt.gp.state_dict())
 
 
 #plot to test
-c.group_data().plot('1','2','scatter')
+opt_data = c.group_data().loc[:,['FocusingSolenoid', 'BuckingSolenoid']].to_numpy()
+fig,ax = plt.subplots()
+ax.plot(opt_data[20:,0],opt_data[20:,1])
+#c.group_data().plot('FocusingSolenoid', 'BuckingSolenoid')
 plt.show()
