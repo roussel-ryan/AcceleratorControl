@@ -116,23 +116,37 @@ class OTR2Profiles(GroupObservation):
         - set TCAV0 to OFF
         '''
         otr_base_pv = 'OTRS:IN20:571:'
-        xrms = controller.interface.get_PYs([otr_base_pv + 'XRMS'])
-        yrms = controller.interface.get_PYs([otr_base_pv + 'YRMS'])
+        time.sleep(3)
+        xrms = controller.interface.get_PVs([otr_base_pv + 'XRMS'])[0]
+        yrms = controller.interface.get_PVs([otr_base_pv + 'YRMS'])[0]
+        print('xrms:',xrms)
+        print('yrms:',yrms)
+        sigma_z = 0
 
         if self.measure_z:
             controller.interface.set_TCAV(1)
-            tcav_on_xrms = controller.interface.get_PYs([otr_base_pv + 'XRMS'])
+            time.sleep(3)
+            tcav_on_xrms = controller.interface.get_PVs([otr_base_pv + 'YRMS'])[0]
             controller.interface.set_TCAV(0)
 
             #find quad difference to get rms bunch length
             tcav_scale = 1.0 #convert rmsx size to time (units: m/s)
 
-            sigma_z = np.sqrt((tcav_on_xrms**2 - xrms**2) / tcav_scale**2)
-            results = np.array((sigma_x, sigma_y, sigma_z))
+            sigma_z = np.copy(tcav_on_xrms)#np.sqrt((tcav_on_xrms**2 - xrms**2) / tcav_scale**2)
+            print('sigma_z:',sigma_z)
+            results = np.array((xrms, yrms, sigma_z))
         else:
-            results = np.array((sigma_x,sigma_y))
+            results = np.array((xrms,yrms))
             
-        return pd.DataFrame(data = results.reshape(1,-1),
+            
+        if (xrms < 0) or (yrms < 0) or (sigma_z < 100):
+            self.__call__(controller)
+            print('foo')
+
+        
+        else:
+            
+            return pd.DataFrame(data = results.reshape(1,-1),
                             columns = self.output_names)
         
         

@@ -44,17 +44,24 @@ class SLACInterface:
         
         for i in range(len(params)):
             epics.caput(params[i].name, pvvals[i])
+    
 
     def get_PVs(self, names):
-        return epics.caget_many([names])
+
+        return epics.caget_many(names)
 
     def set_TCAV(self, state):
         #sets the tcav on (1) or off (0) depending on the value of state
-        PV_name = None
         if state == 1:
-            epics.caput(PV_name, 1)
+            epics.caput('TCAV:IN20:490:TC0_C_1_TCTL',1)
+            epics.caput('KLYS:LI20:51:BEAMCODE1_TCTL',1)
+            
+
         else:
-            epics.caput(PV_name, 0)
+            epics.caput('TCAV:IN20:490:TC0_C_1_TCTL',0)
+            epics.caput('KLYS:LI20:51:BEAMCODE1_TCTL',0)
+            
+
     
 class TestInterface(AcceleratorInterface):
     def __init__(self):

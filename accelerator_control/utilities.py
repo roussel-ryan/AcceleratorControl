@@ -1,4 +1,4 @@
-import transformer
+from . import transformer
 import torch
 
 

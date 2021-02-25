@@ -5,7 +5,9 @@ import torch
 import time
 import logging
 import pandas as pd
+
 import os
+#import ScreenTools
 
 from . import interface
 from . import observations
@@ -20,18 +22,24 @@ class Controller:
 
     '''
 
-    def __init__(self, config_fname, **kwargs):
+    def __init__(self, config_fname, interface = interface.TestInterface(),**kwargs):
         self.logger = logging.getLogger()
 
-        self.interface = kwargs.get('interface', interface.TestInterface())
+            
+
+        #self.interface = kwargs.get('interface', interface.TestInterface())
         self.save_path = kwargs.get('save_path', 'data/')
         self.save_fname = kwargs.get('save_fname', 'data')
 
         #import configuration settings from json file
         self._import_config(config_fname)
-        
+
         self.start_time = int(time.time())
         
+        
+        #create accelerator interface object if we are not testing
+        self.interface = interface
+
         #self.testing = testing
         #if not self.testing:
         #    self.interface = interface.AWAInterface()
@@ -65,9 +73,9 @@ class Controller:
 
         except AttributeError:
             self.data = temp_df
-
+        
         self.save_data()
-
+        
     def get_named_parameters(self, names):
         return [self.parameters[self.parameter_key[name]] for name in names]
     
@@ -139,6 +147,12 @@ class Controller:
     def group_data(self):
         return self.data.fillna(-np.inf).groupby(['state_idx']).max()
 
+        
+    def reset(self):
+        raise NotImplementedError
+        #self.state = torch.empty((1,self.n_parameters))
+        
+    
     def save_data(self):
         if not os.path.exists(self.save_path):
             os.makedirs(self.save_path)
@@ -146,8 +160,4 @@ class Controller:
 
     def load_data(self, fname):
         self.data = pd.read_pickle(fname)
-        
-    def reset(self):
-        raise NotImplementedError
-        #self.state = torch.empty((1,self.n_parameters))
 
