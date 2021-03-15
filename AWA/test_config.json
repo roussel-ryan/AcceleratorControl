@@ -1,0 +1,13 @@
+{
+    "wait_time": 0.1,
+    "parameters": [
+        {
+            "name": "test_param",
+            "channel": "",
+            "bounds": [
+                0.0,
+                1.0
+            ]
+        }
+    ]
+}

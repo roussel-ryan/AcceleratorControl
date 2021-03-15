@@ -54,6 +54,13 @@ class Controller:
         
         #do observation and merge results with last input parameter state
         results = []
+
+        try:
+            self.new_state
+        except AttributeError:
+            self.logger.error('cannot do observation as no parameters have been set')
+            return None
+        
         for i in range(n_samples):
             results += [pd.concat([self.new_state.reset_index(drop=True),
                                    obs(self)],
