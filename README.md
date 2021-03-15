@@ -1,4 +1,4 @@
-# AWA_GP
+# Accelerator Control
 Control system code for doing GP optimization at AWA
 
 Code is organized as follows
