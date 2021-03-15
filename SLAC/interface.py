@@ -35,6 +35,33 @@ class AcceleratorInterface:
         raise NotImplementedError
 
 
+class SLACInterface:
+    def __init__(self):
+        pass
+    
+    def set_beamline(self, params, pvvals):
+        assert len(params) == len(pvvals)
+        
+        for i in range(len(params)):
+            epics.caput(params[i].name, pvvals[i])
+    
+
+    def get_PVs(self, names):
+
+        return epics.caget_many(names)
+
+    def set_TCAV(self, state):
+        #sets the tcav on (1) or off (0) depending on the value of state
+        if state == 1:
+            epics.caput('TCAV:IN20:490:TC0_C_1_TCTL',1)
+            epics.caput('KLYS:LI20:51:BEAMCODE1_TCTL',1)
+            
+
+        else:
+            epics.caput('TCAV:IN20:490:TC0_C_1_TCTL',0)
+            epics.caput('KLYS:LI20:51:BEAMCODE1_TCTL',0)
+            
+
     
 class TestInterface(AcceleratorInterface):
     def __init__(self):
