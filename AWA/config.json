@@ -2,84 +2,36 @@
     "wait_time": 0.1,
     "parameters": [
         {
-            "name": "distgen:r_dist:sigma_xy:value",
+            "name": "FocusingSolenoid",
             "channel": "",
             "bounds": [
                 0.229557814,
                 0.499997494
             ]
         },
-        {
-            "name": "distgen:t_dist:length:value",
+	{
+            "name": "MatchingSolenoid",
             "channel": "",
             "bounds": [
-                3.00000088,
-                11.992921
+                0.229557814,
+                0.499997494
             ]
         },
-        {
-            "name": "distgen:total_charge:value",
+	{
+            "name": "GunPhase",
             "channel": "",
             "bounds": [
-                250.0,
-                250.0
+                0.229557814,
+                0.499997494
             ]
         },
-        {
-            "name": "SOL1:solenoid_field_scale",
+	{
+            "name": "LinacPhase",
             "channel": "",
             "bounds": [
-                0.221046414,
-                0.252305929
+                0.229557814,
+                0.499997494
             ]
         },
-        {
-            "name": "CQ01:b1_gradient",
-            "channel": "",
-            "bounds": [
-                -0.00999734982,
-                0.00992647049
-            ]
-        },
-        {
-            "name": "SQ01:b1_gradient",
-            "channel": "",
-            "bounds": [
-                -0.0099995171,
-                0.00999267544
-            ]
-        },
-        {
-            "name": "L0A_scale:voltage",
-            "channel": "",
-            "bounds": [
-                58000000.0,
-                58000000.0
-            ]
-        },
-        {
-            "name": "L0A_phase:dtheta0_deg",
-            "channel": "",
-            "bounds": [
-                -24.9996808,
-                9.99658492
-            ]
-        },
-        {
-            "name": "L0B_scale:voltage",
-            "channel": "",
-            "bounds": [
-                70000000.0,
-                70000000.0
-            ]
-        },
-        {
-            "name": "L0B_phase:dtheta0_deg",
-            "channel": "",
-            "bounds": [
-                -24.9941337,
-                9.9994847
-            ]
-        }
     ]
 }
