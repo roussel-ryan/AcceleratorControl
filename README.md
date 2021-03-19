@@ -1,5 +1,5 @@
 # Accelerator Control
-Control system code for doing GP optimization at AWA
+Control system code for accelerators
 
 Code is organized as follows
 ----------------------------

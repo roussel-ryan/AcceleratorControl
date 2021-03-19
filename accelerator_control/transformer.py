@@ -4,8 +4,8 @@ import numpy as np
 
 
 class Transformer:
-    def __init__(self, x, transform_type = 'normalize'):
-        possible_transformations = ['normalize','standardize']
+    def __init__(self, x, transform_type = 'unitary'):
+        possible_transformations = ['unitary','normalize','standardize']
         assert transform_type in possible_transformations
         assert len(x.shape) == 2
 
@@ -23,7 +23,12 @@ class Transformer:
         elif self.ttype == 'standardize':
             self.means = np.mean(self.x, axis = 0)
             self.stds = np.std(self.x, axis = 0)
-            
+
+    def recalculate(self, x):
+        #change transformer data and recalculate stats
+        self.x = x
+        self._get_stats()
+    
     def forward(self, x_old):
         x = x_old.copy()
         assert len(x.shape) == 2

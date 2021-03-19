@@ -1,0 +1,16 @@
+{
+    "wait_time" : 0.1,
+    "parameters": [
+	{
+	    "name" : "X1",
+	    "channel" : "",
+	    "bounds" : [0.0, 1.0]
+	},
+	{
+	    "name" : "X2",
+	    "channel" : "",
+	    "bounds" : [0.0, 1.0]
+	}
+    ]
+    
+}

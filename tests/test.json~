@@ -1,0 +1,16 @@
+{
+    "wait_time" : 0.1,
+    "parameters": [
+	{
+	    "name" : "FocusingSolenoid",
+	    "channel" : "awa:ao01",
+	    "bounds" : [0.0, 1.0]
+	},
+	{
+	    "name" : "BuckingSolenoid",
+	    "channel" : "awa:ao05",
+	    "bounds" : [0.0, 1.0]
+	}
+    ]
+    
+}

@@ -43,7 +43,8 @@ class TestInterface(AcceleratorInterface):
     def set_beamline(self, params, pvvals):
         assert len(params) == len(pvvals)
         self.val = pvvals
-
+        print(self.val)
+        
     def test_observation(self):
         x = self.val
         D = 2
@@ -52,4 +53,4 @@ class TestInterface(AcceleratorInterface):
         h = 1 - np.sqrt(f1 / g)
         f2 = g * h  # objective 2
 
-        return np.array([f1, f2]) + np.random.rand(2)*0.01
+        return np.array([f1, f2])# + np.random.rand(2)*0.01
