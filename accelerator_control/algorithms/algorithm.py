@@ -7,6 +7,7 @@ from .. import observations
 from .. import transformer
 
 
+
 class Algorithm:
     '''
     Algorithm class for use with accelerator operations
@@ -15,7 +16,8 @@ class Algorithm:
     
     '''
 
-    def __init__(self, parameters, observations, controller):
+    def __init__(self, parameters, observations, controller,
+                 pre_observation_function = None):
         '''
         Initialize algorithm
 
@@ -29,11 +31,17 @@ class Algorithm:
 
         controller : controller.Controller
              Controller object used to control the accelerator
-        
+
+        pre_observation_function : callable, optional
+             Optional function called between parameter changes and 
+             performing observations. Default is None
+
         '''
 
         assert isinstance(parameters[0], parameter.Parameter)
 
+        self.logger = logging.getLogger(__name__)
+        
         self.parameters = parameters
         self.observations = observations
         self.controller = controller
@@ -42,6 +50,8 @@ class Algorithm:
         self.n_parameters = len(self.parameters)
         self.n_observations = len(self.observations)
 
+        self.pre_observation_function = pre_observation_function
+        
     def create_model(self):
         '''
         create a model to be passed to an acquisition function
@@ -58,7 +68,6 @@ class Algorithm:
         
         raise NotImplementedError
 
-    
     def get_data(self, normalize = True):
         '''
         return numpy array with observations and convert to torch
@@ -73,6 +82,8 @@ class Algorithm:
         f = data[[obj.name for obj in self.observations]]
         f = f.to_numpy()
         X = data[[p.name for p in self.parameters]].to_numpy()
+
+        self.logger.debug(f'Raw data from controller:\nX:\n{X}\nf:\n{f}')
         
         if normalize:
             f_normed = self._apply_f_normalization(f)
@@ -80,7 +91,8 @@ class Algorithm:
         
         X = torch.from_numpy(X_normed)
         f = torch.from_numpy(f_normed)
-            
+
+        self.logger.debug(f'Retreived data from controller:\nX:\n{X}\nf:\n{f}')
         return X, f
 
 
@@ -89,27 +101,40 @@ class Algorithm:
         '''
         run the algorithm
         '''
+        self.logger.info(f'Starting algorithm run with {n_steps} steps'\
+                          f' and {n_samples} samples per step')
 
         for i in range(n_steps):
+            self.logger.info(f'Step {i}')
+
+            self.logger.debug('creating model')
             model = self.create_model()
 
             #acquire the next point to observe - in normalized space
+            self.logger.debug('acquiring next point')
             candidate = self.acquire_point(model).squeeze()
-
+            
             #unnormalize candidate
             unn_c = np.zeros_like(candidate)
             for i in range(self.n_parameters):
                 unn_c[i] = self.parameters[i].transformer.backward(
                     candidate[i].numpy().reshape(1,1))
 
+            self.logger.debug(f'unnormed candidate is {candidate}')
+            
             
             #set parameters
+            self.logger.debug('setting parameters')
             self.controller.set_parameters(self.parameters,
                                            unn_c.astype(
                                                np.float32))
+
+            if not self.pre_observation_function == None:
+                self.pre_observation_function(self.controller)
             
             #make observations necessary (possibly grouped observations)
             #the majority of measurements must be made in serial
+            self.logger.info('starting observations')
             required_observations = []
             for obj in self.observations:
                 if obj.is_child:
@@ -118,27 +143,28 @@ class Algorithm:
                 else:
                     required_observations += [obj]
 
-            logging.info(f'doing observations {[obs.name for obs in required_observations]}')
+            logging.debug(f'doing observations {[obs.name for obs in required_observations]}')
             for obs in required_observations:
                 self.controller.observe(obs, n_samples)
 
+            self.logger.info('observations done')
 
     
     def _apply_f_normalization(self, f):
         '''
         by default apply standardized normalization
-        to modify implement get_f_transformers(f)
+        - to modify implement get_f_transformers(f)
         '''
 
         try:
             transformers = self.get_f_transformers(f)
 
-        except NotImplementedError:
-            transformers = [transformer.Transformer(ele, 'standardize') for ele in f]
+        except AttributeError:
+            transformers = [transformer.Transformer(ele.reshape(-1,1), 'standardize') for ele in f]
             
         #normalize f according to reference point
         f_normed = np.zeros_like(f)
-        for i in range(self.n_objectives):
+        for i in range(self.n_observations):
             f_normed[:,i] = transformers[i].forward(
                 f[:,i].reshape(-1,1)).flatten()
 

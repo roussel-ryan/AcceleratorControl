@@ -22,11 +22,12 @@ class Controller:
 
     '''
 
-    def __init__(self, config_fname, interface = interface.TestInterface(),**kwargs):
-        self.logger = logging.getLogger()
-
+    def __init__(self, config_fname,
+                 interface = interface.TestInterface(),
+                 **kwargs):
+        
+        self.logger = logging.getLogger(__name__)
             
-
         #self.interface = kwargs.get('interface', interface.TestInterface())
         self.save_path = kwargs.get('save_path', 'data/')
         self.save_fname = kwargs.get('save_fname', 'data')
@@ -37,15 +38,9 @@ class Controller:
         self.start_time = int(time.time())
         
         
-        #create accelerator interface object if we are not testing
+        #create accelerator interface object
         self.interface = interface
-
-        #self.testing = testing
-        #if not self.testing:
-        #    self.interface = interface.AWAInterface()
-        #else:
-        #    self.interface = interface.AWAInterface(True,True)
-            
+    
         
         #self.data.astype({'state_idx':'int32', 'time':'int32'},copy = False)
             
@@ -113,12 +108,12 @@ class Controller:
         self.logger.info(
                 f'setting parameters {parameter_names} to values {x}') 
 
-        self.interface.set_beamline(parameters,x)        
-        time.sleep(self.wait_time)
-
+        self.interface.set_beamline(parameters, x)        
+        
 
         try:
-            self.new_state = self.data[self.parameter_names + ['state_idx']].tail(1).copy(deep = True)
+            self.new_state = self.data[self.parameter_names +\
+                                       ['state_idx']].tail(1).copy(deep = True)
 
         except AttributeError:
             self.new_state = pd.DataFrame(np.zeros((1, self.n_parameters + 2)),
@@ -128,8 +123,6 @@ class Controller:
         for p, val in zip(parameters, x):
             self.new_state[p.name] = float(val)
         self.new_state['state_idx'] = self.new_state['state_idx'] + 1
-            
-        #self.data = pd.concat([self.data, new_state], ignore_index = True)
             
 
     def _import_config(self, fname):

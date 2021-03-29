@@ -43,7 +43,6 @@ class TestInterface(AcceleratorInterface):
     def set_beamline(self, params, pvvals):
         assert len(params) == len(pvvals)
         self.val = pvvals
-        print(self.val)
         
     def test_observation(self):
         x = self.val

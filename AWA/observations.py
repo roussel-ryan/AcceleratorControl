@@ -4,6 +4,7 @@ import time
 import h5py
 import sys, os
 import pandas as pd
+import logging
 sys.path.append('\\'.join(os.getcwd().split('\\')[:-1]))
 
 import emittance_calculation
@@ -14,6 +15,8 @@ class AWAScreen(observations.GroupObservation):
     def __init__(self, image_directory = None, n_samples = 1,
                  name = 'AWAScreen', additional_outputs = []):
 
+        self.logger = logging.getLogger(__name__)
+        
         outputs = ['FWHMX',
                    'FWHMY',
                    'FWHML',
@@ -25,7 +28,6 @@ class AWAScreen(observations.GroupObservation):
         self.image_directory = image_directory
         if self.image_directory == None:
             self.save_image = False
-
         else:
             self.save_image = True
 
@@ -34,16 +36,17 @@ class AWAScreen(observations.GroupObservation):
 
     def save_image(self, data_pkt):
         ctime = int(time.time())
-        if self.save_image:
-           for i in range(self.n_samples):
-               with h5py.File(f'{self.image_directory}/img_{ctime}_{i}.h5',
-                              'w') as f:
 
-                   dset = f.create_dataset('raw', data = data_pkt[0][i])
+        fname = f'{self.image_directory}/img_{ctime}_{i}.h5'
+        self.logger.debug(f'saving image data to {fname}')
+        for i in range(self.n_samples):
+            with h5py.File(fname, 'w') as f:
 
-                   #add attrs
-                   for name, item in zip(self.output_names, data_pkt[1:]):
-                       dset.attrs[name] = item[i]
+                dset = f.create_dataset('raw', data = data_pkt[0][i])
+
+                #add attrs
+                for name, item in zip(self.output_names, data_pkt[1:]):
+                    dset.attrs[name] = item[i]
 
 
     def __call__(self, controller):
@@ -51,16 +54,17 @@ class AWAScreen(observations.GroupObservation):
         do screen measurement
 
         '''
-        #wait for any previous changes to settle
-        time.sleep(3)
-
+        
         data_pkt = controller.interface.GetNewImage(self.n_samples)
 
         scalar_data = np.hstack(data_pkt[1:])
         data =  pd.DataFrame(data = scalar_data,
                              columns = self.output_names)
 
-        self.save_image(data_pkt)
+        self.logger.debug(f'returning dataframe:\n {data}') 
+        
+        if self.save_image:
+            self.save_image(data_pkt)
 
         return data
 

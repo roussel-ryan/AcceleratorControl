@@ -2,6 +2,9 @@ import numpy as np
 import logging
 import torch
 
+from botorch import settings
+settings.suppress_botorch_warnings(True)
+
 import os, sys
 sys.path.append('\\'.join(os.getcwd().split('\\')[:-1]))
 
@@ -12,7 +15,7 @@ import matplotlib.pyplot as plt
 
     
 #main()
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level = logging.INFO)
 sobo_obs = observations.TestSOBO()
 
 c = controller.Controller('test.json', interface = interface.TestInterface())
@@ -31,7 +34,6 @@ objs = mobo_obs.children
 ref = torch.tensor((1.0,5.0))
 opt = mobo.MultiObjectiveBayesian(opt_params, objs, c, ref) 
 opt.run(20,1)
-print(c.data)
 
 #print(opt.gp.state_dict())
 
