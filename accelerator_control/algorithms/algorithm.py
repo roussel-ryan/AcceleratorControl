@@ -68,7 +68,7 @@ class Algorithm:
         
         raise NotImplementedError
 
-    def get_data(self, normalize = True):
+    def get_data(self, normalize_x = True, normalize_f = True):
         '''
         return numpy array with observations and convert to torch
         Note: by default input parameters are normalized from 0 to 1
@@ -77,23 +77,40 @@ class Algorithm:
         Always use normalize = True unless doing visualization!!!
 
         '''
+
+        
         data = self.controller.data.groupby(['state_idx']).mean()
         
         f = data[[obj.name for obj in self.observations]]
         f = f.to_numpy()
-        X = data[[p.name for p in self.parameters]].to_numpy()
+        x = data[[p.name for p in self.parameters]].to_numpy()
 
-        self.logger.debug(f'Raw data from controller:\nX:\n{X}\nf:\n{f}')
-        
-        if normalize:
-            f_normed = self._apply_f_normalization(f)
-            X_normed = self._apply_X_normalization(X)
-        
-        X = torch.from_numpy(X_normed)
+        self.logger.debug(f'Raw data from controller:\nX:\n{x}\nf:\n{f}')
+
+        #by default normalize all f (set all of normalize flags to 1)
+        if np.all(normalize_f):
+            f_nflags = np.ones_like(f[0])
+        else:
+            assert isinstance(normalize_f, np.ndarray)
+            f_nflags = normalize_f
+
+        f_normed = self._apply_f_normalization(f, f_nflags)
+
+    
+        #by default normalize all x (set all of normalize flags to 1)
+        if np.all(normalize_x):
+            x_nflags = np.ones_like(x[0])
+        else:
+            assert isinstance(normalize_x, np.ndarray)
+            x_nflags = normalize_x
+    
+        x_normed = self._apply_x_normalization(x, x_nflags)
+  
+        x = torch.from_numpy(x_normed)
         f = torch.from_numpy(f_normed)
 
-        self.logger.debug(f'Retreived data from controller:\nX:\n{X}\nf:\n{f}')
-        return X, f
+        self.logger.debug(f'Scaled data from controller:\nX:\n{x}\nf:\n{f}')
+        return x, f
 
 
     
@@ -101,7 +118,7 @@ class Algorithm:
         '''
         run the algorithm
         '''
-        self.logger.info(f'Starting algorithm run with {n_steps} steps'\
+        self.logger.info(f'Starting algorithm run with {n_steps} steps' +\
                           f' and {n_samples} samples per step')
 
         for i in range(n_steps):
@@ -143,44 +160,52 @@ class Algorithm:
                 else:
                     required_observations += [obj]
 
-            logging.debug(f'doing observations {[obs.name for obs in required_observations]}')
+            logging.debug('doing observations' +\
+                          f'{[obs.name for obs in required_observations]}')
+
             for obs in required_observations:
                 self.controller.observe(obs, n_samples)
 
             self.logger.info('observations done')
 
     
-    def _apply_f_normalization(self, f):
+    def _apply_f_normalization(self, f, normalize_flags):
         '''
         by default apply standardized normalization
-        - to modify implement get_f_transformers(f)
+        - to modify transformer type implement get_f_transformers(f)
         '''
 
         try:
-            transformers = self.get_f_transformers(f)
-
-        except AttributeError:
-            transformers = [transformer.Transformer(ele.reshape(-1,1), 'standardize') for ele in f]
+            self.f_transformers = self.get_f_transformers(f)
             
+        except AttributeError:
+            self.f_transformers = [
+                transformer.Transformer(ele.reshape(-1,1),
+                                        'standardize') for ele in f.T]
+
+        logging.debug(f'number of f transformers: {len(self.f_transformers)}')
+        
         #normalize f according to reference point
-        f_normed = np.zeros_like(f)
+        f_normed = f.copy()
         for i in range(self.n_observations):
-            f_normed[:,i] = transformers[i].forward(
-                f[:,i].reshape(-1,1)).flatten()
+            if normalize_flags[i]:
+                f_normed[:,i] = self.f_transformers[i].forward(
+                    f[:,i].reshape(-1,1)).flatten()
 
 
         return f_normed
 
-    def _apply_X_normalization(self, X):
+    def _apply_x_normalization(self, x, normalize_flags):
         '''
         by default apply normalization based on input bounds
 
         '''    
 
         #normalize each input vector
-        X_normed = np.zeros_like(X)
+        x_normed = x.copy()
         for i in range(self.n_parameters):
-            X_normed[:,i] = self.parameters[i].transformer.forward(
-                X[:,i].reshape(-1,1)).flatten()
+            if normalize_flags[i]:
+                x_normed[:,i] = self.parameters[i].transformer.forward(
+                    x[:,i].reshape(-1,1)).flatten()
 
-        return X_normed
+        return x_normed

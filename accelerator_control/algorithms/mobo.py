@@ -22,7 +22,8 @@ class MultiObjectiveBayesian(algorithm.Algorithm):
 
     '''
 
-    def __init__(self, parameters, observations, controller, ref, **kwargs):
+    def __init__(self, parameters, observations, controller, constraints,
+                 ref, **kwargs):
         '''
         Initialize optimizer
 
@@ -37,35 +38,35 @@ class MultiObjectiveBayesian(algorithm.Algorithm):
         controller : controller.AWAController
              Controller object used to control the accelerator
         
+        constraints : list, optional
+            List of binary constraint observations, 1.0 if constraint is satisfied, 
+            0.0 otherwise
 
         '''
         settings.suppress_botorch_warnings(True)
 
-        self.n_observations = len(observations)
+        assert isinstance(constraints, list)
+                
+        self.n_constraints = len(constraints)
+        self.use_constraints = not self.n_constraints == 0
+
+        if self.use_constraints:
+            raise NotImplementedError('sucks to suck but this isn\'t implemented yet')
         
         #reference point - assumes minimization
-        assert ref.shape[0] == self.n_observations
+        assert ref.shape[0] == len(observations)
         self.ref = ref
 
-        super().__init__(parameters, observations, controller)
+        super().__init__(parameters, observations + constraints, controller)
 
         
         #define function transformers for each objective
         self.transformers = []
-        for i in range(self.n_observations):
+        for i in range(len(observations)):
             bound_vals = np.array((0.0,self.ref[i])).reshape(2,1)
             self.transformers += [transformer.Transformer(bound_vals)]
 
         
-        #contruct a GP model - Matern kernel w/ nu = 2.5 and ARD, GammaPriors on lengthscales and output scales
-        #note: pass a custom kernel via the covar_module argument
-        #note: objectives are multiplied by -1 to do minimization
-        #self.gp = SingleTaskGP(self.X, self.f)
-
-        #set mean module variable to -1 to improve optimization and set gradient to false
-        #self.gp.mean_module.constant.data = torch.tensor((-1.0,-1.0))
-        #self.gp.mean_module.constant.requires_grad = False
-
     def acquire_point(self, model):
         #finds new candidate point based on EHVI acquisition function
         Y = model.train_targets.transpose(0,1)
@@ -94,13 +95,5 @@ class MultiObjectiveBayesian(algorithm.Algorithm):
 
         return self.gp
 
-    def _apply_f_normalization(self, f):
-        
-        #normalize f according to reference point
-        f_normed = np.zeros_like(f)
-        for i in range(self.n_observations):
-            f_normed[:,i] = self.transformers[i].forward(
-                f[:,i].reshape(-1,1)).flatten()
-
-        return f_normed
-
+    def get_f_transformers(self, f):
+        return self.transformers

@@ -30,7 +30,7 @@ for i in range(20):
     c.observe(mobo_obs)
 
 #objs = [sobo_obs, mobo_obs.children[1]]
-objs = mobo_obs.children
+objs = mobo_obs.children[:-1]
 ref = torch.tensor((1.0,5.0))
 opt = mobo.MultiObjectiveBayesian(opt_params, objs, c, ref) 
 opt.run(20,1)

@@ -110,9 +110,14 @@ class TestSOBO(Observation):
                             columns = [self.name])
         
 class TestMOBO(GroupObservation):
-    '''observation class used for testing MOBO algorithm'''
+    '''
+    observation class used for testing MOBO algorithm
+    '1' and '2' return ZDT1 values 
+    '3' returns 0 if x[0] < 0.5, 1 otherwise
+
+    '''
     def __init__(self, name = 'TestMOBO'):
-        output_names = ['1','2']
+        output_names = ['1','2','3']
         super().__init__(name, output_names)
 
     def __call__(self, controller):

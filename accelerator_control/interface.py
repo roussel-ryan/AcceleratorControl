@@ -52,4 +52,6 @@ class TestInterface(AcceleratorInterface):
         h = 1 - np.sqrt(f1 / g)
         f2 = g * h  # objective 2
 
-        return np.array([f1, f2])# + np.random.rand(2)*0.01
+        f3 = float(x[0] < 0.5)
+        
+        return np.array([f1, f2, f3])# + np.random.rand(2)*0.01
