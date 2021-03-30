@@ -36,7 +36,7 @@ class Controller:
         self._import_config(config_fname)
 
         self.start_time = int(time.time())
-        
+        self.logger(f'start time is {int(self.start_time)}')
         
         #create accelerator interface object
         self.interface = interface

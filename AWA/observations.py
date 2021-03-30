@@ -20,7 +20,8 @@ class AWAScreen(observations.GroupObservation):
         outputs = ['FWHMX',
                    'FWHMY',
                    'FWHML',
-                   'CX','CY'] + additional_outputs
+                   'CX','CY',
+                   'ICT1','ICT2','ICT3','ICT4'] + additional_outputs
 
         self.n_samples = 1
 
@@ -111,7 +112,8 @@ class Emittance(AWAScreen):
         lx, ly = image.shape
         X, Y = np.ogrid[0:lx,0:ly]
         
-        mask = (X - self.screen_center[0])**2 + (Y - self.screen_center[1])**2 > self.screen_radius**2
+        mask = (X - self.screen_center[0])**2 +\
+            (Y - self.screen_center[1])**2 > self.screen_radius**2
 
         #set values in the masking region to zero
         image[mask] = 0
@@ -140,8 +142,7 @@ class Emittance(AWAScreen):
         emittance = emittance.calculate_emittance(image, scale,
                                                   self.slit_sep,
                                                   self.drift)
-        
-        
+                
         scalar_data = np.hstack(data_pkt[1:])
         data =  pd.DataFrame(data = scalar_data,
                              columns = self.output_names)

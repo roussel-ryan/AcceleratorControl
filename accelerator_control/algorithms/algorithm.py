@@ -138,14 +138,14 @@ class Algorithm:
                     candidate[i].numpy().reshape(1,1))
 
             self.logger.debug(f'unnormed candidate is {candidate}')
-            
-            
+                        
             #set parameters
             self.logger.debug('setting parameters')
             self.controller.set_parameters(self.parameters,
                                            unn_c.astype(
                                                np.float32))
 
+            #execute preobservation function
             if not self.pre_observation_function == None:
                 self.pre_observation_function(self.controller)
             

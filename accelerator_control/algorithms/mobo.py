@@ -22,8 +22,8 @@ class MultiObjectiveBayesian(algorithm.Algorithm):
 
     '''
 
-    def __init__(self, parameters, observations, controller, constraints,
-                 ref, **kwargs):
+    def __init__(self, parameters, observations, controller,
+                 ref, constraints = [], **kwargs):
         '''
         Initialize optimizer
 

@@ -100,9 +100,7 @@ class AWAInterface(interface.AcceleratorInterface):
         we will simply close the connection and reopen it
         elf.
         '''
-        
-        
-
+    
         NShots = 0
         self.img = []
 
@@ -113,6 +111,7 @@ class AWAInterface(interface.AcceleratorInterface):
         self.CentroidX = np.empty((NSamples, 1))
         self.CentroidY = np.empty((NSamples, 1))
 
+        self.charge = np.empty((NSamples, 4))
 
         if not self.Testing:
             self.logger.debug('restarting camera client')
@@ -137,7 +136,12 @@ class AWAInterface(interface.AcceleratorInterface):
                     self.CentroidY[NShots] = c['CY']
                     self.NewMeasurement = True
                     self.img += [self.GetImage()]
+                    
+                    for i in range(1,5):
+                        self.charge[NShots, i - 1] = caget(f'AWA:ICTMON:Ch{i}')
+
                     NShots += 1
+
                 else:
                     self.logger.warning('camera client not ready for data')
 
@@ -151,14 +155,18 @@ class AWAInterface(interface.AcceleratorInterface):
                 self.CentroidY[NShots] = data
                 NShots += 1
 
+                self.charge[NShots] = np.ones(4)
+
         self.img = np.array(self.img)
-                
+
+        
         return [self.img,
                 self.FWHMX,
                 self.FWHMY,
                 self.FWHML,
                 self.CentroidX,
-                self.CentroidY]
+                self.CentroidY,
+                self.charge]
         
     def set_parameters(self, setvals, channels):
          #power supply control settings are -10.0 to 10.0
