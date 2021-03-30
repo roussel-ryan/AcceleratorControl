@@ -7,7 +7,6 @@ import logging
 import pandas as pd
 
 import os
-#import ScreenTools
 
 from . import interface
 from . import observations
@@ -36,15 +35,13 @@ class Controller:
         self._import_config(config_fname)
 
         self.start_time = int(time.time())
-        self.logger(f'start time is {int(self.start_time)}')
+        self.logger.info(f'start time is {int(self.start_time)}')
         
         #create accelerator interface object
         self.interface = interface
     
-        
-        #self.data.astype({'state_idx':'int32', 'time':'int32'},copy = False)
-            
-    def observe(self, obs, n_samples = 1, **kwargs):
+                    
+    def observe(self, obs, **kwargs):
         wait_time = kwargs.get('wait_time', self.wait_time)
         
         #do observation and merge results with last input parameter state
@@ -56,17 +53,15 @@ class Controller:
             self.logger.error('cannot do observation as no parameters have been set')
             return None
         
-        for i in range(n_samples):
-            results += [pd.concat([self.new_state.reset_index(drop=True),
-                                   obs(self)],
-                                  axis = 1)] 
+        obs_data = obs(self)
 
-        #state = self.new_state
-        #tarray = np.vstack([state.to_numpy() for i in range(n_samples)])
-        #tarray = np.hstack([tarray, values])
-        #temp_df = pd.DataFrame(data = tarray,
-        #                       columns =  self.parameter_names + obs.output_names)
-        temp_df = pd.concat(results, ignore_index = True)
+        #check to make sure that obs.__call__ outputs the right number of samples
+        assert len(obs_data) == obs.n_samples
+        
+        new_state_info = pd.concat([
+            self.new_state.reset_index(drop = True) for i in range(len(obs_data))])
+
+        temp_df = pd.concat([new_state_info.reset_index(drop = True), obs_data], axis = 1) 
         temp_df['time'] = time.time()
         
 
@@ -79,6 +74,11 @@ class Controller:
         self.save_data()
         
     def get_named_parameters(self, names):
+        '''
+        get parameter objects with given names list
+        
+        '''
+        
         return [self.parameters[self.parameter_key[name]] for name in names]
     
     
@@ -102,7 +102,6 @@ class Controller:
             parameters[i].check_param_value(x[i])
         
             
-            
         parameter_names = [param.name for param in parameters]
 
         self.logger.info(
@@ -110,7 +109,7 @@ class Controller:
 
         self.interface.set_beamline(parameters, x)        
         
-
+        #if we have previous measurements add a new state to add to self.data DataFrame
         try:
             self.new_state = self.data[self.parameter_names +\
                                        ['state_idx']].tail(1).copy(deep = True)

@@ -35,7 +35,7 @@ class Observation:
 
     '''
     
-    def __init__(self, name):
+    def __init__(self, name, n_samples = 1):
         self.name = name
         self.is_child = False
         
@@ -69,10 +69,11 @@ class GroupObservation:
     - child observation name is <parent name>.<child name>
 
     '''
-    def __init__(self, name, output_names):
+    def __init__(self, name, output_names, n_samples = 1):
         self.name = name
         self.children = []
-
+        self.n_samples = n_samples
+        
         self.output_names = output_names
 
         #add children observations

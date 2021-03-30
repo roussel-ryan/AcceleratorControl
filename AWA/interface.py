@@ -89,9 +89,24 @@ class AWAInterface(interface.AcceleratorInterface):
             self.logger.warning('Trying to retrieve an image before interface is initialized!')
             return 0
 
-    def GetNewImage(self, NSamples = 1):
+    def GetNewImage(self, target_charge, charge_deviation = 0.1, NSamples = 1):
         '''
         get new image and charge data
+
+        Arguments
+        ---------
+        target_charge : float
+            Target charge for valid observation in nC
+
+        charge_deviation : float, optional
+            Fractional deviation from target charge on ICT1 allowed for valid 
+            observation. Default: 0.1
+
+        NSamples : int
+            Number of samples to take
+
+        NOTE: calculations of centroids and FWHM etc. are based on a region of
+        interest, which might be changed by the user!
         
         Connect to camera broadcasting TCP port for notifications
         If it is timed out, then just download and return whatever
@@ -125,22 +140,30 @@ class AWAInterface(interface.AcceleratorInterface):
                 ready = select.select([self.m_CameraClient], [], [], 2)
 
                 if ready[0]:  
-                    a = self.m_CameraClient.recv(1024)
-                    #print(a)
-                    b = "".join(chr(x) for x in a)
-                    c = eval(b)
-                    self.FWHMX[NShots] = c['FWHMX']
-                    self.FWHMY[NShots] = c['FWHMY']
-                    self.FWHML[NShots] = c['FWHML']
-                    self.CentroidX[NShots] = c['CX']
-                    self.CentroidY[NShots] = c['CY']
-                    self.NewMeasurement = True
-                    self.img += [self.GetImage()]
+                    #check charge on ICT1 is within bounds
+                    ICT1_charge = caget(f'AWA:ICTMON:Ch{i}')
+                    if np.abs(ICT1_charge - target_charge) < charge_deviation * target_charge:
+                        
+                        a = self.m_CameraClient.recv(1024)
+                        #print(a)
+                        b = "".join(chr(x) for x in a)
+                        c = eval(b)
+                        self.FWHMX[NShots] = c['FWHMX']
+                        self.FWHMY[NShots] = c['FWHMY']
+                        self.FWHML[NShots] = c['FWHML']
+                        self.CentroidX[NShots] = c['CX']
+                        self.CentroidY[NShots] = c['CY']
+                        self.NewMeasurement = True
+                        self.img += [self.GetImage()]
                     
-                    for i in range(1,5):
-                        self.charge[NShots, i - 1] = caget(f'AWA:ICTMON:Ch{i}')
+                        for i in range(1,5):
+                            self.charge[NShots, i - 1] = caget(f'AWA:ICTMON:Ch{i}')
 
-                    NShots += 1
+                        NShots += 1
+                        
+                    else:
+                        self.logger.warning(f'measured charge at ICT1: {ICT1_charge} nC'\
+                                            f'is outside target range: [{0.9*target_charge},{1.1*target_charge}]') 
 
                 else:
                     self.logger.warning('camera client not ready for data')
@@ -153,10 +176,11 @@ class AWAInterface(interface.AcceleratorInterface):
                 self.FWHML[NShots] = data
                 self.CentroidX[NShots] = data
                 self.CentroidY[NShots] = data
-                NShots += 1
 
                 self.charge[NShots] = np.ones(4)
+                NShots += 1
 
+                
         self.img = np.array(self.img)
 
         

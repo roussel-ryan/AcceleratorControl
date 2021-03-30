@@ -15,12 +15,15 @@ def main():
     interf = interface.AWAInterface(Testing = True)
     c = controller.Controller('test_config.json', interface = interf)
 
-    screen_obs = observations.AWAScreen(image_directory = 'pics')
+    screen_obs = observations.AWAScreen(1.0, n_samples = 5, image_directory = 'pics')
 
     param = c.get_named_parameters(['test_param'])
 
     c.set_parameters(param, np.ones((1,1)))
     
+    c.observe(screen_obs)
+    c.set_parameters(param, np.random.rand(1,1))
+
     c.observe(screen_obs)
     print(c.data)
     

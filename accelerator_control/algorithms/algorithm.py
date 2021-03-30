@@ -164,7 +164,7 @@ class Algorithm:
                           f'{[obs.name for obs in required_observations]}')
 
             for obs in required_observations:
-                self.controller.observe(obs, n_samples)
+                self.controller.observe(obs)
 
             self.logger.info('observations done')
 

@@ -12,9 +12,37 @@ import emittance_calculation
 from accelerator_control import observations
 
 class AWAScreen(observations.GroupObservation):
-    def __init__(self, image_directory = None, n_samples = 1,
+    def __init__(self, target_charge, charge_deviation = 0.1,
+                 image_directory = None, n_samples = 1,
                  name = 'AWAScreen', additional_outputs = []):
 
+        '''
+        AWAScreen measurement class - extends GroupObservation for AWA
+        
+        Arguments
+        ---------
+        target_charge : float
+            Target charge for valid observation in nC
+
+        charge_deviation : float, optional
+            Fractional deviation from target charge on ICT1 allowed for valid 
+            observation. Default: 0.1
+
+        image_directory : str, optional
+            Location to save image data. Default: None
+
+        n_samples : int, optional
+            Number of samples to take. Default: 1
+
+        name : str, optional
+            Name of observation. Default: 'AWAScreen'
+
+        additional_outputs : list, optional
+            List of strings that describe extra observations added to subclass
+
+        '''
+        
+        
         self.logger = logging.getLogger(__name__)
         
         outputs = ['FWHMX',
@@ -23,14 +51,16 @@ class AWAScreen(observations.GroupObservation):
                    'CX','CY',
                    'ICT1','ICT2','ICT3','ICT4'] + additional_outputs
 
-        self.n_samples = 1
-
+        self.n_samples = n_samples
+        self.target_charge = target_charge
+        self.charge_deviation = charge_deviation
+        
         #determine if we are saving images
         self.image_directory = image_directory
         if self.image_directory == None:
-            self.save_image = False
+            self.save_image_flag = False
         else:
-            self.save_image = True
+            self.save_image_flag = True
 
             
         super().__init__(name, outputs)
@@ -38,9 +68,9 @@ class AWAScreen(observations.GroupObservation):
     def save_image(self, data_pkt):
         ctime = int(time.time())
 
-        fname = f'{self.image_directory}/img_{ctime}_{i}.h5'
-        self.logger.debug(f'saving image data to {fname}')
+        self.logger.debug(f'saving image data to {self.image_directory}')
         for i in range(self.n_samples):
+            fname = f'{self.image_directory}/img_{ctime}_{i}.h5'
             with h5py.File(fname, 'w') as f:
 
                 dset = f.create_dataset('raw', data = data_pkt[0][i])
@@ -56,7 +86,9 @@ class AWAScreen(observations.GroupObservation):
 
         '''
         
-        data_pkt = controller.interface.GetNewImage(self.n_samples)
+        data_pkt = controller.interface.GetNewImage(self.target_charge,
+                                                    self.charge_deviation,
+                                                    self.n_samples)
 
         scalar_data = np.hstack(data_pkt[1:])
         data =  pd.DataFrame(data = scalar_data,
@@ -64,7 +96,7 @@ class AWAScreen(observations.GroupObservation):
 
         self.logger.debug(f'returning dataframe:\n {data}') 
         
-        if self.save_image:
+        if self.save_image_flag:
             self.save_image(data_pkt)
 
         return data
@@ -130,10 +162,9 @@ class Emittance(AWAScreen):
         calculate emittance from screen measurement
 
         '''
-        #wait for any previous changes to settle
-        time.sleep(3)
-
-        data_pkt = controller.interface.GetNewImage(1)
+        data_pkt = controller.interface.GetNewImage(self.target_charge,
+                                                    self.charge_deviation,
+                                                    1)
 
         #get masked image and calculate emittance
         masked_image = self.get_masked_image(data_pkt[0])
