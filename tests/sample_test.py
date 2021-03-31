@@ -15,10 +15,10 @@ import matplotlib.pyplot as plt
 
     
 #main()
-logging.basicConfig(level = logging.INFO)
+logging.basicConfig(level = logging.DEBUG)
 sobo_obs = observations.TestSOBO()
 
-c = controller.Controller('test.json', interface = interface.TestInterface())
+c = controller.Controller('test2.json', interface = interface.TestInterface())
 
 opt_params = c.get_named_parameters(['X1', 'X2'])
 
@@ -26,24 +26,9 @@ opt_params = c.get_named_parameters(['X1', 'X2'])
 #MOBO test
 mobo_obs = observations.TestMOBO()
 
-samples = np.random.rand(10,2)
-sampler = sample.Sample(opt_params, mobo_obs.children, c, samples)
+samples = np.random.rand(10,2) * 2.0
+sampler = sample.Sample(opt_params, mobo_obs.children, c, samples, normalized = False)
 sampler.run(10,1)
 print(c.data)
 
 
-#objs = [sobo_obs, mobo_obs.children[1]]
-objs = mobo_obs.children[:-1]
-ref = torch.tensor((1.0,5.0))
-opt = mobo.MultiObjectiveBayesian(opt_params, objs, c, ref) 
-opt.run(20,1)
-
-#print(opt.gp.state_dict())
-
-
-#plot to test
-opt_data = c.group_data().loc[:,['1', '2']].to_numpy()
-fig,ax = plt.subplots()
-ax.plot(opt_data[20:,0],opt_data[20:,1],'+')
-#c.group_data().plot('FocusingSolenoid', 'BuckingSolenoid')
-plt.show()

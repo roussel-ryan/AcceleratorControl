@@ -12,7 +12,7 @@ import emittance_calculation
 from accelerator_control import observations
 
 class AWAScreen(observations.GroupObservation):
-    def __init__(self, target_charge, charge_deviation = 0.1,
+    def __init__(self, target_charge = -1, charge_deviation = 0.1,
                  image_directory = None, n_samples = 1,
                  name = 'AWAScreen', additional_outputs = []):
 
@@ -21,8 +21,9 @@ class AWAScreen(observations.GroupObservation):
         
         Arguments
         ---------
-        target_charge : float
-            Target charge for valid observation in nC
+        target_charge : float, optional
+            Target charge for valid observation in nC, if negative ignore.
+            Default: -1 (ignore)
 
         charge_deviation : float, optional
             Fractional deviation from target charge on ICT1 allowed for valid 

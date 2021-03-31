@@ -4,7 +4,7 @@ import numpy as np
 
 
 class Transformer:
-    def __init__(self, x, transform_type = 'unitary'):
+    def __init__(self, x, transform_type = 'normalize'):
         possible_transformations = ['unitary','normalize','standardize']
         assert transform_type in possible_transformations
         assert len(x.shape) == 2

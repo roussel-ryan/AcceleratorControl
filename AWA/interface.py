@@ -89,14 +89,15 @@ class AWAInterface(interface.AcceleratorInterface):
             self.logger.warning('Trying to retrieve an image before interface is initialized!')
             return 0
 
-    def GetNewImage(self, target_charge, charge_deviation = 0.1, NSamples = 1):
+    def GetNewImage(self, target_charge = -1, charge_deviation = 0.1, NSamples = 1):
         '''
         get new image and charge data
 
         Arguments
         ---------
-        target_charge : float
-            Target charge for valid observation in nC
+        target_charge : float, optional
+            Target charge for valid observation in nC, if negative ignore. 
+            Default: -1 (ignore)
 
         charge_deviation : float, optional
             Fractional deviation from target charge on ICT1 allowed for valid 
@@ -140,9 +141,9 @@ class AWAInterface(interface.AcceleratorInterface):
                 ready = select.select([self.m_CameraClient], [], [], 2)
 
                 if ready[0]:  
-                    #check charge on ICT1 is within bounds
+                    #check charge on ICT1 is within bounds or charge bounds is not specified (target charge < 0)
                     ICT1_charge = caget(f'AWA:ICTMON:Ch{i}')
-                    if np.abs(ICT1_charge - target_charge) < charge_deviation * target_charge:
+                    if np.abs(ICT1_charge - target_charge) < charge_deviation * target_charge or target_charge < 0:
                         
                         a = self.m_CameraClient.recv(1024)
                         #print(a)
@@ -162,8 +163,12 @@ class AWAInterface(interface.AcceleratorInterface):
                         NShots += 1
                         
                     else:
-                        self.logger.warning(f'measured charge at ICT1: {ICT1_charge} nC'\
-                                            f'is outside target range: [{0.9*target_charge},{1.1*target_charge}]') 
+                        #if we are considering charge limits then print a warning
+                        if target_charge > 0:
+                            self.logger.warning(f'ICT1 charge:{ICT1_charge} nC'\
+                                                f' is outside target range:'\
+                                                f'[{0.9*target_charge},'\
+                                                f'{1.1*target_charge}]') 
 
                 else:
                     self.logger.warning('camera client not ready for data')

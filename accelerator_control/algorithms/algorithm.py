@@ -64,6 +64,7 @@ class Algorithm:
     def aquire_point(self, model = None):
         '''
         Algorithm used to pick the next observation point
+        should return a NORMALIZED CANDIDATE [0,1)
         '''
         
         raise NotImplementedError
@@ -130,14 +131,15 @@ class Algorithm:
             #acquire the next point to observe - in normalized space
             self.logger.debug('acquiring next point')
             candidate = self.acquire_point(model).squeeze()
+            self.logger.debug(f'normalized candidate is {candidate}')
+
             
             #unnormalize candidate
             unn_c = np.zeros_like(candidate)
             for i in range(self.n_parameters):
                 unn_c[i] = self.parameters[i].transformer.backward(
                     candidate[i].numpy().reshape(1,1))
-
-            self.logger.debug(f'unnormed candidate is {candidate}')
+            self.logger.debug(f'unnormed candidate is {unn_c}')
                         
             #set parameters
             self.logger.debug('setting parameters')
