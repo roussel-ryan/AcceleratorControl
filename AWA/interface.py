@@ -188,14 +188,15 @@ class AWAInterface(interface.AcceleratorInterface):
                 
         self.img = np.array(self.img)
 
+        #OVERWRITE THIS TO GET ROI
+        ROI = np.array(((0,0),(700,700)))
         
-        return [self.img,
-                self.FWHMX,
+        return self.img, [self.FWHMX,
                 self.FWHMY,
                 self.FWHML,
                 self.CentroidX,
                 self.CentroidY,
-                self.charge]
+                self.charge], ROI
         
     def set_parameters(self, setvals, channels):
          #power supply control settings are -10.0 to 10.0

@@ -45,10 +45,15 @@ def calculate_emittance(image, scale, slit_sep, drift, threshold = 0.0):
     #we assume that the beam is divergent, as a result the peaks should be at least
     #2 mm apart
     peaks,_ = find_peaks(proj, distance = 2.0e-3 / scale)
-    logging.info(f'peak finding found {len(peaks)} peaks')
-    logging.debug(f'found peaks at {peaks} px')
-    logging.debug(f'mean seperation {np.mean(peaks[1:] - peaks[:-1])*scale:.2e}')
-    logging.debug(f'rms seperation {np.std(peaks[1:] - peaks[:-1])*scale:.2e}')
+
+    if len(peaks) < 5:
+        logger.warning('detected only {len(peaks)} peaks '
+                       '-- emittance might be underestimated')
+
+    logger.debug(f'peak finding found {len(peaks)} peaks')
+    logger.debug(f'found peaks at {peaks} px')
+    logger.debug(f'mean seperation {np.mean(peaks[1:] - peaks[:-1])*scale:.2e}')
+    logger.debug(f'rms seperation {np.std(peaks[1:] - peaks[:-1])*scale:.2e}')
     
     #calculate mid points and number of blobs
     mid_pts = (peaks[1:] + peaks[:-1])/2

@@ -66,7 +66,7 @@ class AWAScreen(observations.GroupObservation):
             
         super().__init__(name, outputs)
 
-    def save_image(self, data_pkt):
+    def save_image(self, images, sdata):
         ctime = int(time.time())
 
         self.logger.debug(f'saving image data to {self.image_directory}')
@@ -74,10 +74,10 @@ class AWAScreen(observations.GroupObservation):
             fname = f'{self.image_directory}/img_{ctime}_{i}.h5'
             with h5py.File(fname, 'w') as f:
 
-                dset = f.create_dataset('raw', data = data_pkt[0][i])
+                dset = f.create_dataset('raw', data = images[i])
 
                 #add attrs
-                for name, item in zip(self.output_names, data_pkt[1:]):
+                for name, item in zip(self.output_names, sdata):
                     dset.attrs[name] = item[i]
 
 
@@ -87,18 +87,21 @@ class AWAScreen(observations.GroupObservation):
 
         '''
         
-        data_pkt = controller.interface.GetNewImage(self.target_charge,
-                                                    self.charge_deviation,
-                                                    self.n_samples)
-
-        scalar_data = np.hstack(data_pkt[1:])
+        images, sdata, ROI = controller.interface.GetNewImage(self.target_charge,
+                                                             self.charge_deviation,
+                                                             self.n_samples)
+        #check ROI to make sure it is reasonable
+        if np.any(ROI[1] - ROI[0] < 5):
+            self.logger.warning('check your region of interest, it is very small!')
+        
+        scalar_data = np.hstack(sdata)
         data =  pd.DataFrame(data = scalar_data,
                              columns = self.output_names)
 
         self.logger.debug(f'returning dataframe:\n {data}') 
         
         if self.save_image_flag:
-            self.save_image(data_pkt)
+            self.save_image(images, sdata)
 
         return data
 
@@ -157,25 +160,47 @@ class Emittance(AWAScreen):
         
         
         return image
-        
+
+    def get_roi(self, image, ROI_coords):
+        '''
+        get portion of image that is inside region of interest rectangle
+
+        Arguments
+        ---------
+        image : ndarray, size (N x M)
+            Image array
+
+        ROI_coords : ndarray, size (2,2)
+            Region of interest coordinates in the form
+            ((x1,y1),(x2,y2)) where (x1,y1) is the lower left corner
+            and (x2,y2) is the upper right corner
+
+        '''
+        return image[ROI_coords[0,0]:ROI_coords[1,0],
+                     ROI_coords[0,1]:ROI_coords[1,1]]
+    
     def __call__(self, controller):
         '''
         calculate emittance from screen measurement
 
         '''
-        data_pkt = controller.interface.GetNewImage(self.target_charge,
-                                                    self.charge_deviation,
-                                                    1)
+        image, sdata, ROI = controller.interface.GetNewImage(self.target_charge,
+                                                             self.charge_deviation,
+                                                             1)
 
+        
         #get masked image and calculate emittance
-        masked_image = self.get_masked_image(data_pkt[0])
+        #masked_image = self.get_masked_image(data_pkt[0])
 
+        #get ROI portion of the image
+        image = self.get_roi(image, ROI)
+        
         #calculate emittance and add to data_pkt
         emittance = emittance.calculate_emittance(image, scale,
                                                   self.slit_sep,
                                                   self.drift)
                 
-        scalar_data = np.hstack(data_pkt[1:])
+        scalar_data = np.hstack([*sdata,emittance])
         data =  pd.DataFrame(data = scalar_data,
                              columns = self.output_names)
         
