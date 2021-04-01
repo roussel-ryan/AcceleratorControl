@@ -31,7 +31,7 @@ class AWAInterface(interface.AcceleratorInterface):
     TempVal=0.0
     Testing=False
 
-    def __init__(self,UseFrameGrabber = True,Testing = False):
+    def __init__(self,UseFrameGrabber = True, Testing = False):
         self.logger = logging.getLogger(__name__)
         self.logger.info('Starting interface')
         self.Testing = Testing
@@ -86,9 +86,25 @@ class AWAInterface(interface.AcceleratorInterface):
             else:
                 return np.array(self.AWAPGCamera.GetImage())
         else:
-            self.logger.warning('Trying to retrieve an image before interface is initialized!')
-            return 0
+            raise RuntimeError('Trying to retrieve an image before interface is initialized!')
 
+    def GetROI(self):
+        if self.Initialized:
+            if self.UseNIFG:
+                module = self.ni_frame_grabber
+            else:
+                module = self.AWAPGCamera
+
+            x1 = self.ni_frame_grabber.ROIX1
+            x2 = self.ni_frame_grabber.ROIX2
+            y1 = self.ni_frame_grabber.ROIY1
+            y2 = self.ni_frame_grabber.ROIY2
+
+            return np.array(((x1,y1),(x2,y2)))
+        else:
+            raise RuntimeError('Trying to retrieve an image before interface is initialized!')
+
+        
     def GetNewImage(self, target_charge = -1, charge_deviation = 0.1, NSamples = 1):
         '''
         get new image and charge data
@@ -188,8 +204,8 @@ class AWAInterface(interface.AcceleratorInterface):
                 
         self.img = np.array(self.img)
 
-        #OVERWRITE THIS TO GET ROI
-        ROI = np.array(((0,0),(700,700)))
+        #get ROI
+        ROI = self.GetROI()
         
         return self.img, [self.FWHMX,
                 self.FWHMY,
