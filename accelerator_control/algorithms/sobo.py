@@ -3,7 +3,7 @@ import torch
 
 from . import algorithm
 
-from botorch.models import SingleTaskGP
+from botorch.models import SingleTaskGP, FixedNoiseGP
 from botorch.fit import fit_gpytorch_model
 from gpytorch.mlls import ExactMarginalLogLikelihood
 
@@ -56,6 +56,18 @@ class SingleObjectiveBayesian(algorithm.Algorithm):
         self.logger.info('Initialized single objective acquisition function with\n'\
                          f'beta: {self.beta}\n'\
                          f'n_constraints: {self.n_constraints}')
+
+        #if defined include custom mean, covar, lk models
+        self.custom_lk = kwargs.get('custom_lk', None)
+        self.custom_covar = kwargs.get('custom_covar', None)
+
+        #if we want fixed noise
+        self.fixed_noise = kwargs.get('fixed_noise', None)
+        if self.fixed_noise == None:
+            self.use_fixed_noise = False
+        else:
+            self.use_fixed_noise = True
+            
         
     def acquire_point(self, model):
         #finds new canidate point based on UCB acquisition function w/ or w/o constraints
@@ -93,8 +105,19 @@ class SingleObjectiveBayesian(algorithm.Algorithm):
     def create_model(self):
         #get data and add to GP
         X, f = self.get_data()
-        self.gp = SingleTaskGP(X, f)
-
+        
+        if self.use_fixed_noise:
+            self.logger.debug('using FixedNoiseGP model')
+            self.gp = FixedNoiseGP(X, f, torch.full_like(f, self.fixed_noise),
+                                   self.custom_lk,
+                                   self.custom_covar)
+        else:
+            self.logger.debug('using SingleTaskGP model')
+            self.gp = SingleTask GP(X, f,
+                                   self.custom_lk,
+                                   self.custom_covar)
+       
+            
         #fit GP hyperparameters
         mll = ExactMarginalLogLikelihood(self.gp.likelihood,
                                          self.gp)
