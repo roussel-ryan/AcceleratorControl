@@ -29,6 +29,7 @@ for i in range(20):
     c.set_parameters(opt_params, np.random.rand(2))
     c.observe(mobo_obs)
 
+print(c.data)
 #objs = [sobo_obs, mobo_obs.children[1]]
 objs = mobo_obs.children[:-1]
 ref = torch.tensor((1.0,5.0))

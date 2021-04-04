@@ -31,8 +31,9 @@ print(c.data)
 
 exp_obs = [mobo_obs.children[0]]
 constr_obs = [mobo_obs.children[2]]
-opt = explore.BayesianExploration(opt_params, exp_obs, c, constr_obs) 
-opt.run(20,1)
+opt = explore.BayesianExploration(opt_params, exp_obs, c, constr_obs, sigma = 0.01) 
+opt.run(40,1)
+print(c.data)
 
 #print(opt.gp.state_dict())
 
@@ -40,7 +41,7 @@ opt.run(20,1)
 #plot to test
 opt_data = c.group_data().loc[:,['X1', 'X2']].to_numpy()
 fig,ax = plt.subplots()
-ax.plot(opt_data[20:,0],opt_data[20:,1],'C0+')
-ax.plot(opt_data[:20,0],opt_data[:20,1],'C1+')
+ax.plot(opt_data[10:,0],opt_data[10:,1],'C0')
+ax.plot(opt_data[:10,0],opt_data[:10,1],'C1+')
 #c.group_data().plot('FocusingSolenoid', 'BuckingSolenoid')
 plt.show()

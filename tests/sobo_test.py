@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 
     
 #main()
-logging.basicConfig(level = logging.INFO)
+logging.basicConfig(level = logging.DEBUG)
 
 c = controller.Controller('test.json', interface = interface.TestInterface())
 opt_params = c.get_named_parameters(['X1', 'X2'])
@@ -30,7 +30,7 @@ for i in range(20):
 #objs = [sobo_obs, mobo_obs.children[1]]
 objs = mobo_obs.children[1]
 constr = [mobo_obs.children[-1]]
-ref = torch.tensor((1.0,5.0))
+OAref = torch.tensor((1.0,5.0))
 opt = sobo.SingleObjectiveBayesian(opt_params, objs, c, constr) 
 opt.run(20,1)
 

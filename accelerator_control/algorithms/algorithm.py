@@ -88,6 +88,14 @@ class Algorithm:
 
         self.logger.debug(f'Raw data from controller:\nX:\n{x}\nf:\n{f}')
 
+        #check if we accidently forgot to specify that a column is a constraint
+        for i in range(f.shape[1]):
+            if np.array_equal(np.unique(f[:,i]), np.array((0.0,1.0))) and normalize_f[i]:
+                self.logger.warning(f'data column {i} has only ones and zeros' +
+                                    ' but normalization flag is set to 1!' +
+                                    ' Did you mean for this column to be normalized?')
+                
+        
         #by default normalize all f (set all of normalize flags to 1)
         if np.all(normalize_f):
             f_nflags = np.ones_like(f[0])

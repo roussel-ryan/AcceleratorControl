@@ -83,17 +83,6 @@ class MultiObjectiveBayesian(algorithm.Algorithm):
         return candidate
 
         
-    def create_model(self):
-        #get data and add to GP, note negative sign to do minimization
-        X, f = self.get_data()
-        self.gp = SingleTaskGP(X, -f)
-
-        #fit GP hyperparameters
-        mll = ExactMarginalLogLikelihood(self.gp.likelihood,
-                                         self.gp)
-        fit_gpytorch_model(mll)
-
-        return self.gp
 
     def get_f_transformers(self, f):
         return self.transformers

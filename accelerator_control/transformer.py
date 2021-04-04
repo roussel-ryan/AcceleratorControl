@@ -16,13 +16,15 @@ class Transformer:
         self._get_stats()
         
     def _get_stats(self):
+        #note ignore nans
+        
         if self.ttype == 'normalize':
-            self.mins = np.min(self.x, axis = 0)
-            self.maxs = np.max(self.x, axis = 0) 
+            self.mins = np.nanmin(self.x, axis = 0)
+            self.maxs = np.nanmax(self.x, axis = 0) 
 
         elif self.ttype == 'standardize':
-            self.means = np.mean(self.x, axis = 0)
-            self.stds = np.std(self.x, axis = 0)
+            self.means = np.nanmean(self.x, axis = 0)
+            self.stds = np.nanstd(self.x, axis = 0)
 
     def recalculate(self, x):
         #change transformer data and recalculate stats

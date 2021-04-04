@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 
-from . import algorithm
+from . import bayesian_algorithm
 
 from botorch.models import SingleTaskGP, FixedNoiseGP
 from botorch.fit import fit_gpytorch_model
@@ -13,7 +13,7 @@ from botorch.optim import optimize_acqf
 
 from advanced_acquisition import binary_constraint, combine_acquisition
 
-class SingleObjectiveBayesian(algorithm.Algorithm):
+class SingleObjectiveBayesian(bayesian_algorithm.BayesianAlgorithm):
     '''
     Conduct single objective bayesian optimization of accelerator using 
     parameters and objective objects
@@ -44,12 +44,8 @@ class SingleObjectiveBayesian(algorithm.Algorithm):
 
         '''
 
-        assert isinstance(constraints, list)
         
-        self.n_constraints = len(constraints)
-        self.use_constraints = not self.n_constraints == 0
-        
-        super().__init__(parameters, [objective] + constraints, controller)
+        super().__init__(parameters, [objective], controller, constraints)
         self.maximize = maximize    
         self.beta = kwargs.get('beta',2.0)
 
@@ -57,16 +53,6 @@ class SingleObjectiveBayesian(algorithm.Algorithm):
                          f'beta: {self.beta}\n'\
                          f'n_constraints: {self.n_constraints}')
 
-        #if defined include custom mean, covar, lk models
-        self.custom_lk = kwargs.get('custom_lk', None)
-        self.custom_covar = kwargs.get('custom_covar', None)
-
-        #if we want fixed noise
-        self.fixed_noise = kwargs.get('fixed_noise', None)
-        if self.fixed_noise == None:
-            self.use_fixed_noise = False
-        else:
-            self.use_fixed_noise = True
             
         
     def acquire_point(self, model):
@@ -82,8 +68,7 @@ class SingleObjectiveBayesian(algorithm.Algorithm):
             #define constraints
             constrs = []
             for i in range(1, self.n_constraints + 1):
-                constrs += [binary_constraint.BinaryConstraint(model,
-                                                               i)]
+                constrs += [binary_constraint.BinaryConstraint(model,i)]
                 
             acq = combine_acquisition.MultiplyAcquisitionFunction(model,
                                                                   [UCB] + constrs)
@@ -101,30 +86,6 @@ class SingleObjectiveBayesian(algorithm.Algorithm):
                                              q=1, num_restarts = 20,
                                              raw_samples = 20)
         return candidate
-
-    def create_model(self):
-        #get data and add to GP
-        X, f = self.get_data()
-        
-        if self.use_fixed_noise:
-            self.logger.debug('using FixedNoiseGP model')
-            self.gp = FixedNoiseGP(X, f, torch.full_like(f, self.fixed_noise),
-                                   self.custom_lk,
-                                   self.custom_covar)
-        else:
-            self.logger.debug('using SingleTaskGP model')
-            self.gp = SingleTask GP(X, f,
-                                   self.custom_lk,
-                                   self.custom_covar)
-       
-            
-        #fit GP hyperparameters
-        mll = ExactMarginalLogLikelihood(self.gp.likelihood,
-                                         self.gp)
-        fit_gpytorch_model(mll)
-
-        return self.gp
-
         
                                                     
 
