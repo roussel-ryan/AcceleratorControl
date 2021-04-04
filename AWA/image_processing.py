@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from skimage import data, feature, measure, filters, morphology
+import logging
 
 def zero_surrounded(array):
     return not (array[0,:].any() or
@@ -9,8 +10,10 @@ def zero_surrounded(array):
                 array[:,-1].any())
 
 
-def check_image(image, test = True):
+def check_image(image, verbose = True):
     '''
+    Note: use this with a sub-image ROI
+
     check for the following 
     - if there is a beam
     - if the beam is entirely inside the ROI
@@ -19,9 +22,7 @@ def check_image(image, test = True):
 
     '''
 
-    #get region of interest
-    
-
+    logger = logging.getLogger(__name__)
     
     #apply a gaussian filter
     if test:
@@ -34,6 +35,7 @@ def check_image(image, test = True):
     #if the normalized difference is below 0.01 then there is no beam / beam is too big
     width = (np.max(gaussian_image) - np.min(gaussian_image)) / np.mean(gaussian_image)
     if width < 0.01:
+        logger.warning('no beam detected')
         return 0
 
     #apply triangle threshold to determine beam locations
@@ -51,7 +53,9 @@ def check_image(image, test = True):
     if zero_surrounded(dilated_binary):
         return 1
     else:
+        logger.warning('ROI is clipping the beam envelope')
         return 0
+
 
     
     

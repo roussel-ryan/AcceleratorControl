@@ -10,6 +10,7 @@ sys.path.append('\\'.join(os.getcwd().split('\\')[:-1]))
 import emittance_calculation
 
 from accelerator_control import observations
+import image_processing
 
 class AWAScreen(observations.GroupObservation):
     def __init__(self, target_charge = -1, charge_deviation = 0.1,
@@ -50,7 +51,7 @@ class AWAScreen(observations.GroupObservation):
                    'FWHMY',
                    'FWHML',
                    'CX','CY',
-                   'ICT1','ICT2','ICT3','ICT4'] + additional_outputs
+                   'ICT1','ICT2','ICT3','ICT4','IMGF'] + additional_outputs
 
         self.n_samples = n_samples
         self.target_charge = target_charge
@@ -80,21 +81,82 @@ class AWAScreen(observations.GroupObservation):
                 for name, item in zip(self.output_names, sdata):
                     dset.attrs[name] = item[i]
 
-
-    def __call__(self, controller):
+    def get_ROI(self, image, ROI_coords):
         '''
-        do screen measurement
+        get portion of image that is inside region of interest rectangle
+
+        Arguments
+        ---------
+        image : ndarray, size (N x M)
+            Image array
+
+        ROI_coords : ndarray, size (2,2)
+            Region of interest coordinates in the form
+            ((x1,y1),(x2,y2)) where (x1,y1) is the lower left corner
+            and (x2,y2) is the upper right corner
+
+        '''
+        return image[ROI_coords[0,0]:ROI_coords[1,0],
+                     ROI_coords[0,1]:ROI_coords[1,1]]
+
+    def _get_and_check_data(self, controller):
+        '''
+        Get data from the interface and check its validity
+
+        Check the following:
+        - that a reasonable ROI has been specified (bigger than 2 px in each direction
+        - that there is a beam in the ROI/the beam is not cut off in the ROI
+
+        NOTE: we consider charge in the interface so that measurements can be repeated quickly
+
+        If one of these conditions are not met then set 'IMGF' to 0 and return Nans for the 
+        beamsize/location data.
 
         '''
         
         images, sdata, ROI = controller.interface.GetNewImage(self.target_charge,
                                                              self.charge_deviation,
                                                              self.n_samples)
-        #check ROI to make sure it is reasonable
-        if np.any(ROI[1] - ROI[0] < 5):
-            self.logger.warning('check your region of interest, it is very small!')
+
         
-        scalar_data = np.hstack(sdata)
+        #if image is not viable then set this flag to 0 for each image
+        good_image = np.ones(len(images))
+        
+        #check ROI in both directions to make sure it is reasonable
+        if np.any(ROI[1] - ROI[0] < 2):
+            self.logger.warning('check your region of interest, it is very small!')
+            good_image[:] = 0
+
+        #apply ROI to images
+        ROI_images = []
+        for i in range(self.n_samples):
+            ROI_images += [self.get_ROI(images[i], ROI)]
+
+            
+        #check that a beam exists and is inside the ROI for each image
+        for i in range(len(images)):
+            if not image_processing.check_image(ROI_images[i]):
+                good_image[i] = 0
+
+        valid_image_idx = np.nonzero(good_image)
+        self.logger.debug(f'valid image idx: {valid_image_idx}')
+                
+        #where good_image = 0 set all data elements ['FWHMX/Y/L','CX/Y']  to np.NaN
+        scalar_data = np.hstack([*sdata, good_image.reshape(-1,1)])
+        scalar_data[valid_image_idx, np.arange(5)] = np.nan
+
+        self.logger.debug(f'scalar data after image checking\n{scalar_data}') 
+        return ROI_images, scalar_data
+
+        
+                    
+    def __call__(self, controller):
+        '''
+        Do screen measurement using interface
+
+        '''
+        images, scalar_data = self._get_and_check_data(controller)
+        
         data =  pd.DataFrame(data = scalar_data,
                              columns = self.output_names)
 
@@ -161,23 +223,6 @@ class Emittance(AWAScreen):
         
         return image
 
-    def get_roi(self, image, ROI_coords):
-        '''
-        get portion of image that is inside region of interest rectangle
-
-        Arguments
-        ---------
-        image : ndarray, size (N x M)
-            Image array
-
-        ROI_coords : ndarray, size (2,2)
-            Region of interest coordinates in the form
-            ((x1,y1),(x2,y2)) where (x1,y1) is the lower left corner
-            and (x2,y2) is the upper right corner
-
-        '''
-        return image[ROI_coords[0,0]:ROI_coords[1,0],
-                     ROI_coords[0,1]:ROI_coords[1,1]]
     
     def __call__(self, controller):
         '''

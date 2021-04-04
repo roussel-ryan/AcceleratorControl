@@ -95,10 +95,10 @@ class AWAInterface(interface.AcceleratorInterface):
             else:
                 module = self.AWAPGCamera
 
-            x1 = self.ni_frame_grabber.ROIX1
-            x2 = self.ni_frame_grabber.ROIX2
-            y1 = self.ni_frame_grabber.ROIY1
-            y2 = self.ni_frame_grabber.ROIY2
+            x1 = module.ROIX1
+            x2 = module.ROIX2
+            y1 = module.ROIY1
+            y2 = module.ROIY2
 
             return np.array(((x1,y1),(x2,y2)))
         else:
@@ -176,7 +176,11 @@ class AWAInterface(interface.AcceleratorInterface):
                         for i in range(1,5):
                             self.charge[NShots, i - 1] = caget(f'AWA:ICTMON:Ch{i}')
 
+                        #get ROI
+                        ROI = self.GetROI()
+                            
                         NShots += 1
+
                         
                     else:
                         #if we are considering charge limits then print a warning
@@ -184,12 +188,13 @@ class AWAInterface(interface.AcceleratorInterface):
                             self.logger.warning(f'ICT1 charge:{ICT1_charge} nC'\
                                                 f' is outside target range:'\
                                                 f'[{0.9*target_charge},'\
-                                                f'{1.1*target_charge}]') 
+                                                f'{1.1*target_charge}], sample not counted') 
 
                 else:
                     self.logger.warning('camera client not ready for data')
 
             else:
+                #generate testing data
                 img, data = self.get_test_data()
                 self.img += [img]
                 self.FWHMX[NShots] = data
@@ -198,14 +203,13 @@ class AWAInterface(interface.AcceleratorInterface):
                 self.CentroidX[NShots] = data
                 self.CentroidY[NShots] = data
 
+                ROI = np.array(((0,0),(700,700)))
                 self.charge[NShots] = np.ones(4)
                 NShots += 1
 
                 
         self.img = np.array(self.img)
 
-        #get ROI
-        ROI = self.GetROI()
         
         return self.img, [self.FWHMX,
                 self.FWHMY,
@@ -232,9 +236,30 @@ class AWAInterface(interface.AcceleratorInterface):
             self.logger.debug('sending epics command')
             self.logger.debug(f'caput {pvnames[i]} {pvvals[i]}')
 
+    def get_beamline(self, pvnames):
+        if self.Testing:
+            return np.random.rand(len(pvnames))
+
+        vals = []
+        for i in range(len(pvnames)):
+            vals += [caget(pvnames[i])]
+            self.logger.debug(f'sending epics command \"caget {pvnames[i]}\"')
+        return np.array(vals)
+        
     def get_test_data(self):
         r = np.sin(self.TempVal)
         tmp = sum(r)
-        img = np.random.rand(20, 20)
+        data = np.genfromtxt('test_images/onenc250200.txt',names = True)
+
+        size = 50e-3
+        bins = 700
+        img, xedges, yedges = np.histogram2d(data['x'], data['y'],
+                                            range = np.array(((-0.0,1.0),
+                                                              (-0.0,1.0)))*size/2.0,
+                                            bins=(bins,bins))
+
+        img = img / np.max(img)
+        img = 0.15*np.random.rand(*img.shape) + img
+    
         
         return img, tmp
