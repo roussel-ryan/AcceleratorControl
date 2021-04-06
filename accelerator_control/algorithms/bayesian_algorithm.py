@@ -108,7 +108,7 @@ class BayesianAlgorithm(algorithm.Algorithm):
                 
                 if self.use_fixed_noise:
                     model = FixedNoiseGP(train_x, train_f,
-                                         torch.full_like(f[not_nan_idx,i],
+                                         torch.full_like(train_f),
                                                          self.fixed_noise),
                                          covar_module = self.custom_covar)
                 else:
@@ -132,3 +132,34 @@ class BayesianAlgorithm(algorithm.Algorithm):
         
         return self.gp
 
+    def plot_model(self, obj_idx):
+        #NOTE: ONLY WORKS FOR 2D INPUT SPACES
+
+        X, f = self.get_data(normalize_f = self.f_flags)
+        
+        fig, ax = plt.subplots()
+
+        n = 25
+        x = [np.linspace(0, 1, n) for e in [0,1]]
+
+        xx,yy = np.meshgrid(*x)
+        pts = np.vstack((xx.ravel(), yy.ravel())).T
+        pts = torch.from_numpy(pts).float()
+
+        #get data where there are NOT NANS
+        not_nan_idx = torch.nonzero(~torch.isnan(f[:,obj_idx]))            
+        train_f = f[not_nan_idx, obj_idx]
+        train_x = X[not_nan_idx].squeeze()
+
+        
+        with torch.no_grad():
+            pred = self.gp.posterior(pts)
+            f = pred.mean
+
+        c = ax.pcolor(xx,yy,f[:,obj_idx].detach().reshape(n,n))
+        ax.plot(*train_x.T,'+')
+
+        fig.colorbar(c)
+        
+
+    
