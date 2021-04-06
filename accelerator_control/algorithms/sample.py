@@ -70,7 +70,7 @@ class Sample(algorithm.Algorithm):
         candidate = self._samples[self.meas_number]
         self.meas_number += 1
         
-        return torch.tensor(candidate).reshape(1,1)
+        return torch.tensor(candidate).reshape(1,-1)
 
     def create_model(self):
         return None

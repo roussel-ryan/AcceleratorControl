@@ -112,7 +112,6 @@ class AWAScreen(observations.GroupObservation):
         beamsize/location data.
 
         '''
-        print(self.n_samples)
         images, sdata, ROI = controller.interface.GetNewImage(self.target_charge,
                                                              self.charge_deviation,
                                                              NSamples = self.n_samples)
@@ -147,7 +146,7 @@ class AWAScreen(observations.GroupObservation):
         scalar_data = np.hstack([sdata, good_image.reshape(-1,1)])
         
         for i in range(len(invalid_image_idx)):
-            scalar_data[i, np.arange(5)] = np.nan
+            scalar_data[invalid_image_idx[i], np.arange(5)] = np.nan
 
         self.logger.debug(f'scalar data after image checking\n{scalar_data}') 
         return ROI_images, scalar_data

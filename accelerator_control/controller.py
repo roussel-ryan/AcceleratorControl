@@ -67,7 +67,7 @@ class Controller:
 
         try:
             self.data = pd.concat([self.data, temp_df], ignore_index = True)
-            self.logger.debug(self.data)
+            self.logger.debug(f'current dataset\n {self.data}')
             
         except AttributeError:
             self.data = temp_df

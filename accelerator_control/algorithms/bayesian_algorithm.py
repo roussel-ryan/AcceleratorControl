@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import logging
+import matplotlib.pyplot as plt
 
 from . import algorithm
 from .. import transformer
@@ -48,15 +49,17 @@ class BayesianAlgorithm(algorithm.Algorithm):
         
         self.n_constraints = len(constraints)
         self.use_constraints = not self.n_constraints == 0
-
-        super().__init__(parameters, observations + constraints, controller)
-
+        
         #if defined include custom mean, covar, lk models
         self.custom_lk = kwargs.get('custom_lk', None)
         self.custom_covar = kwargs.get('custom_covar', None)
 
         #if we want fixed noise
         self.fixed_noise = kwargs.get('fixed_noise', None)
+        
+        super().__init__(parameters, observations + constraints, controller, **kwargs)
+
+        
         if self.fixed_noise == None:
             self.use_fixed_noise = False
         else:
@@ -71,7 +74,7 @@ class BayesianAlgorithm(algorithm.Algorithm):
         self.logger.debug(f'setting normalization flags to {self.f_flags}')
         
         
-    def create_model(self):
+    def create_model(self, one_removed = False):
         
         X, f = self.get_data(normalize_f = self.f_flags)
         f = self.f_multiplier * f
@@ -99,17 +102,27 @@ class BayesianAlgorithm(algorithm.Algorithm):
             models = []
             self.logger.debug('Nans detected, using ModelListGP instead of SingleTaskGP')
             for i in range(f.shape[1]):
+                self.logger.debug('data before removing Nans')
+                self.logger.debug(f'train_x:\n {X}')
+                self.logger.debug(f'train_f:\n {f[:,i]}')
+                
                 #get indexes where there are NOT NANS
                 not_nan_idx = torch.nonzero(~torch.isnan(f[:,i]))            
-                train_f = f[not_nan_idx,i]
-                train_x = X[not_nan_idx].squeeze()
-
+                train_f = f[not_nan_idx, i]
+                train_x = X[not_nan_idx].squeeze(1)
                 
+                self.logger.debug(f'data after nan removal')
+                self.logger.debug(f'train_x:\n {train_x}')
+                self.logger.debug(f'train_f:\n {train_f}')
+                
+                if one_removed:
+                    train_x = train_x[:-1]
+                    train_f = train_f[:-1]
                 
                 if self.use_fixed_noise:
                     model = FixedNoiseGP(train_x, train_f,
                                          torch.full_like(train_f),
-                                                         self.fixed_noise),
+                                         self.fixed_noise,
                                          covar_module = self.custom_covar)
                 else:
                     model = SingleTaskGP(train_x, train_f,
@@ -128,8 +141,6 @@ class BayesianAlgorithm(algorithm.Algorithm):
             #create list model
             self.gp = ModelListGP(*models)
                 
-                
-        
         return self.gp
 
     def plot_model(self, obj_idx):

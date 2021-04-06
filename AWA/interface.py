@@ -1,6 +1,7 @@
 import numpy as np
 import copy
 import sys, os
+import time
 sys.path.append('\\'.join(os.getcwd().split('\\')[:-1]))
 
 
@@ -84,10 +85,10 @@ class AWAInterface(interface.AcceleratorInterface):
         
     def GetImage(self):
         if self.Initialized:
-            if self.UseNIFG==True:
+            if self.UseNIFG:
                 return np.array(self.ni_frame_grabber.GetImage())
             else:
-                return np.array(self.AWAPGCamera.GetImage())
+                return np.array(self.AWAPGCamera.GetImage)
         else:
             raise RuntimeError('Trying to retrieve an image before interface is initialized!')
 
@@ -245,7 +246,7 @@ class AWAInterface(interface.AcceleratorInterface):
         for i in range(len(parameters)):
             self.logger.debug('sending epics command')
             self.logger.debug(f'caput {parameters[i].channel} {pvvals[i]}')
-            self.logger.debug(caput(parameters[i].channel, pvvals[i]))
+            self.logger.debug(f'caput status {caput(parameters[i].channel,pvvals[i])}')
             
 
     def get_beamline(self, pvnames):

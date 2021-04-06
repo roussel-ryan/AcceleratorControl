@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import logging
+import time
 
 from .. import parameter
 from .. import transformer
@@ -49,7 +50,7 @@ class Algorithm:
         self.n_parameters = len(self.parameters)
         self.n_observations = len(self.observations)
         self.n_steps = kwargs.get('n_steps',10) 
-        self.pre_observation_function = kwargs.get('pre_observation_function',None)
+        self.pre_observation_function = kwargs.get('pre_observation_function', None)
         
         
     def create_model(self):
@@ -80,8 +81,10 @@ class Algorithm:
         '''
 
         
-        data = self.controller.data.groupby(['state_idx']).mean()
+        #data = self.controller.data.groupby(['state_idx']).mean()
+        data = self.controller.data
         
+        logging.debug(f'observations list {[obs.name for obs in self.observations]}')
         f = data[[obj.name for obj in self.observations]]
         f = f.to_numpy()
         x = data[[p.name for p in self.parameters]].to_numpy()
@@ -103,6 +106,7 @@ class Algorithm:
             assert isinstance(normalize_f, np.ndarray)
             f_nflags = normalize_f
 
+        logging.debug(f'normalization fflags {f_nflags}')        
         f_normed = self._apply_f_normalization(f, f_nflags)
 
     
@@ -145,20 +149,21 @@ class Algorithm:
             #unnormalize candidate
             unn_c = np.zeros_like(candidate)
             for i in range(self.n_parameters):
-                unn_c[i] = self.parameters[i].transformer.backward(
-                    candidate[i].numpy().reshape(1,1))
+                unn_c[0][i] = self.parameters[i].transformer.backward(
+                    candidate[0][i].numpy().reshape(1,1))
             self.logger.debug(f'unnormed candidate is {unn_c}')
                         
             #set parameters
             self.logger.debug('setting parameters')
             self.controller.set_parameters(self.parameters,
-                                           unn_c.astype(
+                                           unn_c.flatten().astype(
                                                np.float32))
 
             #execute preobservation function
-            self.logger.debug(self.pre_observation_function)
-            if not self.pre_observation_function == None:
-                self.pre_observation_function(self.controller)
+            #self.logger.info(self.pre_observation_function)
+            #if not self.pre_observation_function == None:
+            #self.pre_observation_function(self.controller)
+            time.sleep(3)
             
             #make observations necessary (possibly grouped observations)
             #the majority of measurements must be made in serial
