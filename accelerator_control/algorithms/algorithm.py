@@ -3,8 +3,8 @@ import torch
 import logging
 
 from .. import parameter
-from .. import observations
 from .. import transformer
+from .. import pre_observation
 
 
 
@@ -17,7 +17,7 @@ class Algorithm:
     '''
 
     def __init__(self, parameters, observations, controller,
-                 pre_observation_function = None):
+                 **kwargs):
         '''
         Initialize algorithm
 
@@ -37,7 +37,6 @@ class Algorithm:
              performing observations. Default is None
 
         '''
-
         assert isinstance(parameters[0], parameter.Parameter)
 
         self.logger = logging.getLogger(__name__)
@@ -49,8 +48,9 @@ class Algorithm:
         self.parameter_names = parameters
         self.n_parameters = len(self.parameters)
         self.n_observations = len(self.observations)
-
-        self.pre_observation_function = pre_observation_function
+        self.n_steps = kwargs.get('n_steps',10) 
+        self.pre_observation_function = kwargs.get('pre_observation_function',None)
+        
         
     def create_model(self):
         '''
@@ -123,14 +123,14 @@ class Algorithm:
 
 
     
-    def run(self, n_steps = 10, n_samples = 5):
+    def run(self, n_samples = 5):
         '''
         run the algorithm
         '''
-        self.logger.info(f'Starting algorithm run with {n_steps} steps' +\
+        self.logger.info(f'Starting algorithm run with {self.n_steps} steps' +\
                           f' and {n_samples} samples per step')
 
-        for i in range(n_steps):
+        for i in range(self.n_steps):
             self.logger.info(f'Step {i}')
 
             self.logger.debug('creating model')
@@ -138,7 +138,7 @@ class Algorithm:
 
             #acquire the next point to observe - in normalized space
             self.logger.debug('acquiring next point')
-            candidate = self.acquire_point(model).squeeze()
+            candidate = self.acquire_point(model)
             self.logger.debug(f'normalized candidate is {candidate}')
 
             
@@ -156,6 +156,7 @@ class Algorithm:
                                                np.float32))
 
             #execute preobservation function
+            self.logger.debug(self.pre_observation_function)
             if not self.pre_observation_function == None:
                 self.pre_observation_function(self.controller)
             

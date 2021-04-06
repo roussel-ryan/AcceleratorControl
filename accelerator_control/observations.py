@@ -73,6 +73,7 @@ class GroupObservation:
         self.name = name
         self.children = []
         self.n_samples = n_samples
+        self.is_child = False
         
         self.output_names = output_names
 

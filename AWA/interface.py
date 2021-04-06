@@ -51,6 +51,9 @@ class AWAInterface(interface.AcceleratorInterface):
                 del self.AWAPGCamera
                 self.m_CameraClient.close()
                 self.m_CameraClient = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            else:
+                self.m_CameraClient = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                
 
             pythoncom.CoInitialize()
             self.UseNIFG = UseFrameGrabber
@@ -133,6 +136,8 @@ class AWAInterface(interface.AcceleratorInterface):
         elf.
         '''
     
+        self.logger.debug(f'taking Nsamples {NSamples}')
+    
         NShots = 0
         self.img = []
 
@@ -158,8 +163,9 @@ class AWAInterface(interface.AcceleratorInterface):
 
                 if ready[0]:  
                     #check charge on ICT1 is within bounds or charge bounds is not specified (target charge < 0)
-                    ICT1_charge = caget(f'AWA:ICTMON:Ch{i}')
-                    if np.abs(ICT1_charge - target_charge) < charge_deviation * target_charge or target_charge < 0:
+                    #ICT1_charge = caget(f'AWAICTMon:Ch1')
+                    ICT1_charge = 0
+                    if (np.abs(ICT1_charge - target_charge) < charge_deviation * target_charge) or (target_charge < 0):
                         
                         a = self.m_CameraClient.recv(1024)
                         #print(a)
@@ -173,12 +179,15 @@ class AWAInterface(interface.AcceleratorInterface):
                         self.NewMeasurement = True
                         self.img += [self.GetImage()]
                     
-                        for i in range(1,5):
-                            self.charge[NShots, i - 1] = caget(f'AWA:ICTMON:Ch{i}')
+                        #get charge
+                        #for i in range(1,5):
+                        #    self.charge[NShots, i - 1] = caget(f'AWAICTMon:Ch{i}')
 
                         #get ROI
                         ROI = self.GetROI()
-                            
+                        
+                        self.logger.debug(ROI)
+                        
                         NShots += 1
 
                         
@@ -210,13 +219,15 @@ class AWAInterface(interface.AcceleratorInterface):
                 
         self.img = np.array(self.img)
 
-        
-        return self.img, [self.FWHMX,
+        #collect scalar data
+        sdata = np.hstack([self.FWHMX,
                 self.FWHMY,
                 self.FWHML,
                 self.CentroidX,
                 self.CentroidY,
-                self.charge], ROI
+                self.charge])
+    
+        return self.img, sdata , ROI
         
     def set_parameters(self, setvals, channels):
          #power supply control settings are -10.0 to 10.0
@@ -224,17 +235,18 @@ class AWAInterface(interface.AcceleratorInterface):
          #
          self.set_beamline(channels,setvals)
          
-    def set_beamline(self, pvnames, pvvals):
-        assert len(pvnames) == len(pvvals)
+    def set_beamline(self, parameters, pvvals):
+        assert len(parameters) == len(pvvals)
         self.TempVal=pvvals
         
         if self.Testing:
             return
 
-        for i in range(len(pvnames)):
-            caput(pvnames[i], pvvals[i])
+        for i in range(len(parameters)):
             self.logger.debug('sending epics command')
-            self.logger.debug(f'caput {pvnames[i]} {pvvals[i]}')
+            self.logger.debug(f'caput {parameters[i].channel} {pvvals[i]}')
+            self.logger.debug(caput(parameters[i].channel, pvvals[i]))
+            
 
     def get_beamline(self, pvnames):
         if self.Testing:

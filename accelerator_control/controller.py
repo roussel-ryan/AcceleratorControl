@@ -67,7 +67,8 @@ class Controller:
 
         try:
             self.data = pd.concat([self.data, temp_df], ignore_index = True)
-
+            self.logger.debug(self.data)
+            
         except AttributeError:
             self.data = temp_df
         
@@ -96,9 +97,11 @@ class Controller:
 
         '''
         #data type checking and make sure we are in bounds
-        assert x.shape[0] == len(parameters)
+        assert len(x) == len(parameters)
         for i in range(len(parameters)):
-            assert isinstance(parameters[i], parameter.Parameter), f'{param} is type {type(param)}, not type parameter'
+            assert isinstance(parameters[i], parameter.Parameter)#,
+                #f'{parameters[i]} is type {type(parameters[i])}, not type parameter'
+            
             parameters[i].check_param_value(x[i])
         
             

@@ -53,7 +53,6 @@ class AWAScreen(observations.GroupObservation):
                    'CX','CY',
                    'ICT1','ICT2','ICT3','ICT4','IMGF'] + additional_outputs
 
-        self.n_samples = n_samples
         self.target_charge = target_charge
         self.charge_deviation = charge_deviation
         
@@ -65,7 +64,7 @@ class AWAScreen(observations.GroupObservation):
             self.save_image_flag = True
 
             
-        super().__init__(name, outputs)
+        super().__init__(name, outputs, n_samples)
 
     def save_image(self, images, sdata):
         ctime = int(time.time())
@@ -78,10 +77,10 @@ class AWAScreen(observations.GroupObservation):
                 dset = f.create_dataset('raw', data = images[i])
 
                 #add attrs
-                for name, item in zip(self.output_names, sdata):
-                    dset.attrs[name] = item[i]
+                #for name, item in zip(self.output_names, sdata):
+                #    dset.attrs[name] = item[:,i]
 
-    def get_ROI(self, image, ROI_coords):
+    def apply_ROI(self, image, ROI_coords):
         '''
         get portion of image that is inside region of interest rectangle
 
@@ -96,8 +95,8 @@ class AWAScreen(observations.GroupObservation):
             and (x2,y2) is the upper right corner
 
         '''
-        return image[ROI_coords[0,0]:ROI_coords[1,0],
-                     ROI_coords[0,1]:ROI_coords[1,1]]
+        return image.T[ROI_coords[0,0]:ROI_coords[1,0],
+                     ROI_coords[0,1]:ROI_coords[1,1]].T
 
     def _get_and_check_data(self, controller):
         '''
@@ -113,14 +112,15 @@ class AWAScreen(observations.GroupObservation):
         beamsize/location data.
 
         '''
-        
+        print(self.n_samples)
         images, sdata, ROI = controller.interface.GetNewImage(self.target_charge,
                                                              self.charge_deviation,
-                                                             self.n_samples)
+                                                             NSamples = self.n_samples)
 
         
         #if image is not viable then set this flag to 0 for each image
         good_image = np.ones(len(images))
+        
         
         #check ROI in both directions to make sure it is reasonable
         if np.any(ROI[1] - ROI[0] < 2):
@@ -130,20 +130,24 @@ class AWAScreen(observations.GroupObservation):
         #apply ROI to images
         ROI_images = []
         for i in range(self.n_samples):
-            ROI_images += [self.get_ROI(images[i], ROI)]
+            ROI_images += [self.apply_ROI(images[i], ROI)]
 
             
         #check that a beam exists and is inside the ROI for each image
         for i in range(len(images)):
-            if not image_processing.check_image(ROI_images[i]):
+            if not image_processing.check_image(ROI_images[i], False):
                 good_image[i] = 0
 
-        valid_image_idx = np.nonzero(good_image)
-        self.logger.debug(f'valid image idx: {valid_image_idx}')
+        invalid_image_idx = np.nonzero(1.0 - good_image)[0]
+        self.logger.debug(f'invalid image idx: {invalid_image_idx}')
                 
         #where good_image = 0 set all data elements ['FWHMX/Y/L','CX/Y']  to np.NaN
-        scalar_data = np.hstack([*sdata, good_image.reshape(-1,1)])
-        scalar_data[valid_image_idx, np.arange(5)] = np.nan
+        self.logger.debug(sdata)
+        self.logger.debug(f'good_image: {good_image}')
+        scalar_data = np.hstack([sdata, good_image.reshape(-1,1)])
+        
+        for i in range(len(invalid_image_idx)):
+            scalar_data[i, np.arange(5)] = np.nan
 
         self.logger.debug(f'scalar data after image checking\n{scalar_data}') 
         return ROI_images, scalar_data
@@ -163,7 +167,7 @@ class AWAScreen(observations.GroupObservation):
         self.logger.debug(f'returning dataframe:\n {data}') 
         
         if self.save_image_flag:
-            self.save_image(images, sdata)
+            self.save_image(images, scalar_data)
 
         return data
 

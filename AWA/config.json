@@ -3,35 +3,19 @@
     "parameters": [
         {
             "name": "FocusingSolenoid",
-            "channel": "",
+            "channel": "Drive:Ctrl:DS1",
             "bounds": [
-                0.229557814,
-                0.499997494
+                5.0,
+                6.0
             ]
         },
-	{
+    	{  
             "name": "MatchingSolenoid",
-            "channel": "",
+            "channel": "Drive:Ctrl:DS3",
             "bounds": [
-                0.229557814,
-                0.499997494
+                0.0,
+                2.5
             ]
-        },
-	{
-            "name": "GunPhase",
-            "channel": "",
-            "bounds": [
-                0.229557814,
-                0.499997494
-            ]
-        },
-	{
-            "name": "LinacPhase",
-            "channel": "",
-            "bounds": [
-                0.229557814,
-                0.499997494
-            ]
-        },
+        }
     ]
 }

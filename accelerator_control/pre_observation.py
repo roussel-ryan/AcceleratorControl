@@ -11,7 +11,7 @@ class Sleep:
         self.logger = logging.getLogger(__name__)
         self.s = sleep_time
 
-    def __call__(self):
+    def __call__(self, controller):
         self.logger.info(f'waiting {self.s} seconds before observations')
         time.sleep(self.s)
 
@@ -19,6 +19,6 @@ class KeyPress:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
 
-    def __call__(self):
+    def __call__(self, controller):
         self.logger.info('waiting for any key press to do observations')
         input('Press any key to continue...')
