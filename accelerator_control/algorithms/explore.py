@@ -51,8 +51,8 @@ class BayesianExploration(bayesian_algorithm.BayesianAlgorithm):
 
         #coefficient of sigma matrix for proximal term exploration
         self.sigma = kwargs.get('sigma', 1e6)
-        
-    def acquire_point(self, model):
+
+    def get_acq(self, model)
         #finds new canidate point based on UCB acquisition function w/ or w/o constraints
         if self.use_constraints:
             flags = torch.zeros(self.n_observations).double()
@@ -77,9 +77,7 @@ class BayesianExploration(bayesian_algorithm.BayesianAlgorithm):
         acq = combine_acquisition.MultiplyAcquisitionFunction(model,
                                                                   [UCB, prox] + constrs)
         
-
-
-
+    def acquire_point(self, model):
         bounds = torch.stack([torch.zeros(self.n_parameters),
                               torch.ones(self.n_parameters)])
         candidate, acq_value = optimize_acqf(acq, bounds = bounds,
@@ -88,6 +86,36 @@ class BayesianExploration(bayesian_algorithm.BayesianAlgorithm):
         return candidate
     
 
+    def plot_acq(self):
+        #NOTE: ONLY WORKS FOR 2D INPUT SPACES
+
+        X, f = self.get_data(normalize_f = self.f_flags)
+        
+        fig, ax = plt.subplots()
+
+        n = 25
+        x = [np.linspace(0, 1, n) for e in [0,1]]
+
+        xx,yy = np.meshgrid(*x)
+        pts = np.vstack((xx.ravel(), yy.ravel())).T
+        pts = torch.from_numpy(pts).float()
+
+        #get data where there are NOT NANS
+        not_nan_idx = torch.nonzero(~torch.isnan(f[:,obj_idx]))            
+        train_f = f[not_nan_idx, obj_idx]
+        train_x = X[not_nan_idx].squeeze()
+
+        acq = self.get_acq(self.gp)
+        
+        with torch.no_grad():
+            f = acq.forward(pts)
+
+        c = ax.pcolor(xx,yy,f[:,obj_idx].detach().reshape(n,n))
+        ax.plot(*train_x.T,'+')
+
+        fig.colorbar(c)
+
+        
 
         
                                                     
