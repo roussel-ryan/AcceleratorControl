@@ -3,6 +3,7 @@ import torch
 import logging
 import time
 
+from .. import observations
 from .. import parameter
 from .. import transformer
 from .. import pre_observation
@@ -163,27 +164,39 @@ class Algorithm:
             #self.logger.info(self.pre_observation_function)
             #if not self.pre_observation_function == None:
             #self.pre_observation_function(self.controller)
-            time.sleep(3)
+            time.sleep(1.5)
             
             #make observations necessary (possibly grouped observations)
             #the majority of measurements must be made in serial
             self.logger.info('starting observations')
             required_observations = []
-            for obj in self.observations:
-                if obj.is_child:
-                    if not obj.parent in required_observations:
-                        required_observations += [obj.parent]
+            for obs in self.observations:
+                #check to see if an observation is a child
+                if obs.is_child:
+                    #check to makre sure this observation is not in any of
+                    #the other parents
+                    expanded_required_observations = []
+                    for sub_obs in required_observations:
+                        if isinstance(sub_obs, observations.GroupObservation):
+                            expanded_required_observations += sub_obs.children
+        
+                        else:
+                            expanded_required_observations += sub_obs
+                    exp_obs_names = [ele.name for ele in expanded_required_observations]
+                    if not obs.name in exp_obs_names: 
+                        if not obs.parent in required_observations:
+                            required_observations += [obs.parent]
                 else:
-                    required_observations += [obj]
+                    required_observations += [obs]
 
-            logging.debug('doing observations' +\
+            self.logger.info('doing observations ' +\
                           f'{[obs.name for obs in required_observations]}')
 
             for obs in required_observations:
                 self.controller.observe(obs)
 
             self.logger.info('observations done')
-
+    
     
     def _apply_f_normalization(self, f, normalize_flags):
         '''

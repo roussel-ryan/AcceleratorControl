@@ -1,7 +1,5 @@
 import numpy as np
-import copy
 import sys, os
-import time
 sys.path.append('\\'.join(os.getcwd().split('\\')[:-1]))
 
 
@@ -12,7 +10,7 @@ import pythoncom
 from win32com import client
 import select
 
-from epics import caget, caput, cainfo
+from epics import caget, caput
 import logging
 
 class AWAInterface(interface.AcceleratorInterface):
@@ -171,26 +169,30 @@ class AWAInterface(interface.AcceleratorInterface):
                         a = self.m_CameraClient.recv(1024)
                         #print(a)
                         b = "".join(chr(x) for x in a)
-                        c = eval(b)
-                        self.FWHMX[NShots] = c['FWHMX']
-                        self.FWHMY[NShots] = c['FWHMY']
-                        self.FWHML[NShots] = c['FWHML']
-                        self.CentroidX[NShots] = c['CX']
-                        self.CentroidY[NShots] = c['CY']
-                        self.NewMeasurement = True
-                        self.img += [self.GetImage()]
-                    
-                        #get charge
-                        #for i in range(1,5):
-                        #    self.charge[NShots, i - 1] = caget(f'AWAICTMon:Ch{i}')
-
-                        #get ROI
-                        ROI = self.GetROI()
+                        try:
+                            c = eval(b)
                         
-                        self.logger.debug(ROI)
-                        
-                        NShots += 1
+                            self.FWHMX[NShots] = c['FWHMX']
+                            self.FWHMY[NShots] = c['FWHMY']
+                            self.FWHML[NShots] = c['FWHML']
+                            self.CentroidX[NShots] = c['CX']
+                            self.CentroidY[NShots] = c['CY']
+                            self.NewMeasurement = True
+                            self.img += [self.GetImage()]
+                            
+                            #get charge
+                            for i in range(1,5):
+                                self.charge[NShots, i - 1] = caget(f'AWAICTMon:Ch{i}')
+    
+                            #get ROI
+                            ROI = self.GetROI()
+                            
+                            self.logger.debug(ROI)
+                            
+                            NShots += 1
 
+                        except SyntaxError:
+                            time.sleep(1)
                         
                     else:
                         #if we are considering charge limits then print a warning

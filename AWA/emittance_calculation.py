@@ -3,6 +3,7 @@ import numpy as np
 import logging
 
 from scipy.signal import find_peaks
+from skimage import filters
 
 def calculate_emittance(image, scale, slit_sep, drift):
     '''
@@ -31,23 +32,35 @@ def calculate_emittance(image, scale, slit_sep, drift):
     logging.getLogger('matplotlib').setLevel(logging.WARNING)
     
     #get projection
-    proj = np.sum(image, axis = 1)
+    orig_proj = np.sum(image, axis = 1)
+    orig_proj = orig_proj / np.max(orig_proj)
 
     #apply threshold
-    proj = np.where(proj > threshold * np.max(proj), proj, 0.0)
+    #proj = np.where(proj > threshold * np.max(proj), proj, 0.0)
+    try:
+        triangle_threshold = filters.threshold_triangle(orig_proj)
+    except ValueError:
+        fig,ax = plt.subplots(1,2)
+        ax[0].plot(orig_proj)
+        ax[1].imshow(image)
+        print(image)
+    logger.debug(f'triangle_threshold: {triangle_threshold}')
+    proj = np.where(orig_proj > triangle_threshold, orig_proj, 0)
 
     #plot proj if in debugging
-    if logger.level == 0:
-        fig,ax = plt.subplots()
-        ax.plot(proj)
+    if 1:
+        fig,ax = plt.subplots(1,2)
+        ax[0].plot(orig_proj)
+        ax[1].plot(proj)
+        
         plt.show()
 
     #we assume that the beam is divergent, as a result the peaks should be at least
     #2 mm apart
-    peaks,_ = find_peaks(proj, distance = 2.0e-3 / scale)
+    peaks,_ = find_peaks(proj, distance = 0.5e-3 / scale)
 
     if len(peaks) < 5:
-        logger.warning('detected only {len(peaks)} peaks '
+        logger.warning(f'detected only {len(peaks)} peaks '
                        '-- emittance might be underestimated')
 
     logger.debug(f'peak finding found {len(peaks)} peaks')
@@ -121,7 +134,7 @@ def calculate_emittance(image, scale, slit_sep, drift):
 
     #calculate emittance
     emittance = np.sqrt(ixxi * ixpxpi - ixxpi**2)
-    logger.info(f'calculated emittance: {emittance:.2e}')
+    logger.info(f'calculated emittance: {emittance:.2e}, n_peaks:{len(peaks)}')
 
     return emittance
 

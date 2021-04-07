@@ -144,6 +144,8 @@ class BayesianExploration(bayesian_algorithm.BayesianAlgorithm):
         c = ax.pcolor(xx,yy,f.reshape(n,n))
         ax.plot(*train_x.T,'+-')
         ax.set_title(type(acq))
+        ax.set_xlabel(self.parameter_names[0].name)
+        ax.set_ylabel(self.parameter_names[1].name)
         ax.figure.colorbar(c)
 
         

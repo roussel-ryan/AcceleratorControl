@@ -53,15 +53,16 @@ class Sample(algorithm.Algorithm):
         #the number of parameters
         
         #if samples are normalized then un-normalize them
+        s = samples.copy()
         if not normalized:
             self.logger.debug(f'normalizing samples {samples}')
             for i in range(len(self.parameters)):
-                samples[:,i] = self.parameters[i].transformer.forward(
+                s[:,i] = self.parameters[i].transformer.forward(
                     samples[:,i].reshape(-1,1)).flatten()
 
             self.logger.debug(f'normed samples {samples}')
             
-        self._samples = samples
+        self._samples = s
         
         
         self.meas_number = 0

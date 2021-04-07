@@ -1,5 +1,4 @@
 import numpy as np
-import copy
 import time
 import h5py
 import sys, os
@@ -74,7 +73,7 @@ class AWAScreen(observations.GroupObservation):
             fname = f'{self.image_directory}/img_{ctime}_{i}.h5'
             with h5py.File(fname, 'w') as f:
 
-                dset = f.create_dataset('raw', data = images[i])
+                f.create_dataset('raw', data = images[i])
 
                 #add attrs
                 #for name, item in zip(self.output_names, sdata):
@@ -98,7 +97,7 @@ class AWAScreen(observations.GroupObservation):
         return image.T[ROI_coords[0,0]:ROI_coords[1,0],
                      ROI_coords[0,1]:ROI_coords[1,1]].T
 
-    def _get_and_check_data(self, controller):
+    def _get_and_check_data(self, controller, n_blobs_required = 1):
         '''
         Get data from the interface and check its validity
 
@@ -131,10 +130,9 @@ class AWAScreen(observations.GroupObservation):
         for i in range(self.n_samples):
             ROI_images += [self.apply_ROI(images[i], ROI)]
 
-            
         #check that a beam exists and is inside the ROI for each image
         for i in range(len(images)):
-            if not image_processing.check_image(ROI_images[i], False):
+            if not image_processing.check_image(ROI_images[i], False, n_blobs_required):
                 good_image[i] = 0
 
         invalid_image_idx = np.nonzero(1.0 - good_image)[0]
@@ -172,8 +170,7 @@ class AWAScreen(observations.GroupObservation):
 
     
 class Emittance(AWAScreen):
-    def __init__(self, screen_center, screen_radius,
-                 slit_sep, drift, image_directory = None):
+    def __init__(self, slit_sep, drift, screen_width_px, **kwargs):
         '''
         Vertical emittance observation and calculation using multi-slit
         diagnostic
@@ -197,56 +194,55 @@ class Emittance(AWAScreen):
 
         '''
 
-        self.screen_center = screen_center
-        self.screen_radius = screen_radius
         self.slit_sep = slit_sep
         self.drift = drift
 
         #conversion from pixels to meters
-        self.m_per_px = 25.4e-3 / self.screen_radius
+        self.m_per_px = 25.4e-3 / screen_width_px
             
         super().__init__(name = 'EMIT',
-                         image_directory = image_directory,
-                         additional_outputs = ['EMIT'])
+                         additional_outputs = ['EMIT','ROT_ANG'], **kwargs)
         
-    def get_masked_image(self, image):
-        lx, ly = image.shape
-        X, Y = np.ogrid[0:lx,0:ly]
-        
-        mask = (X - self.screen_center[0])**2 +\
-            (Y - self.screen_center[1])**2 > self.screen_radius**2
-
-        #set values in the masking region to zero
-        image[mask] = 0
-
-        #trim image (ie remove rows and columns that are all zeros)
-        for i in [0,1]:
-            image = image[:, np.all(np.nonzero(image), axis = 0)].T
-        
-        
-        return image
-
     
     def __call__(self, controller):
         '''
         calculate emittance from screen measurement
 
         '''
-        images, scalar_data = self._get_and_check_data(controller)
+        n_blobs_required = 5
+        images, scalar_data = self._get_and_check_data(controller,
+                                                       n_blobs_required)
 
-        
+
+                
         #calculate emittance and add to data_pkt
         emittances = []
-        for i in range(len(self.images)):
-            emittance = emittance.calculate_emittance(images[i], scale,
-                                                      self.slit_sep,
-                                                      self.drift)
+        rotation_angles = []
+        for i in range(len(images)):
+            if scalar_data[i,-1] == 1.0:
+                #rotate images to align beamlets to axis
+                img, angle = image_processing.rotate_beamlets(images[i])
+                rotation_angles += [angle]
+                self.logger.info(f'rotation_angle: {rotation_angles[i]:.2f}')
+                
+                #calculate emittance
+                emittances += [
+                        emittance_calculation.calculate_emittance(img, 
+                                                                  self.m_per_px,
+                                                                  self.slit_sep,
+                                                                  self.drift)]
+                
+            else:
+                emittances += [np.nan]
+                rotation_angles += [np.nan]
 
         emittances = np.array(emittances).reshape(-1,1)
-        scalar_data = np.hstack([*sdata, emittances])
+        rotation_angles = np.array(rotation_angles).reshape(-1,1)
+
+        scalar_data = np.hstack([scalar_data, emittances, rotation_angles])
         data =  pd.DataFrame(data = scalar_data,
                              columns = self.output_names)
         
-        self.save_image(data_pkt)        
+        #self.save_image(data_pkt)        
 
         return data
