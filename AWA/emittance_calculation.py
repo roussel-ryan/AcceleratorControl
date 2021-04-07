@@ -4,7 +4,7 @@ import logging
 
 from scipy.signal import find_peaks
 
-def calculate_emittance(image, scale, slit_sep, drift, threshold = 0.0):
+def calculate_emittance(image, scale, slit_sep, drift):
     '''
     calculate emittance using processed beam image
 
@@ -31,12 +31,12 @@ def calculate_emittance(image, scale, slit_sep, drift, threshold = 0.0):
     logging.getLogger('matplotlib').setLevel(logging.WARNING)
     
     #get projection
-    proj = np.sum(image, axis = 0)
+    proj = np.sum(image, axis = 1)
 
     #apply threshold
     proj = np.where(proj > threshold * np.max(proj), proj, 0.0)
 
-    #plot proj if in debugging - NOTE this stops computation!
+    #plot proj if in debugging
     if logger.level == 0:
         fig,ax = plt.subplots()
         ax.plot(proj)

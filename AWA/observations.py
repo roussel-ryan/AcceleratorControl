@@ -205,9 +205,9 @@ class Emittance(AWAScreen):
         #conversion from pixels to meters
         self.m_per_px = 25.4e-3 / self.screen_radius
             
-        super().__init__(name = 'Emittance',
+        super().__init__(name = 'EMIT',
                          image_directory = image_directory,
-                         additional_outputs = ['Emittance'])
+                         additional_outputs = ['EMIT'])
         
     def get_masked_image(self, image):
         lx, ly = image.shape
@@ -232,23 +232,18 @@ class Emittance(AWAScreen):
         calculate emittance from screen measurement
 
         '''
-        image, sdata, ROI = controller.interface.GetNewImage(self.target_charge,
-                                                             self.charge_deviation,
-                                                             1)
+        images, scalar_data = self._get_and_check_data(controller)
 
-        
-        #get masked image and calculate emittance
-        #masked_image = self.get_masked_image(data_pkt[0])
-
-        #get ROI portion of the image
-        image = self.get_roi(image, ROI)
         
         #calculate emittance and add to data_pkt
-        emittance = emittance.calculate_emittance(image, scale,
-                                                  self.slit_sep,
-                                                  self.drift)
-                
-        scalar_data = np.hstack([*sdata,emittance])
+        emittances = []
+        for i in range(len(self.images)):
+            emittance = emittance.calculate_emittance(images[i], scale,
+                                                      self.slit_sep,
+                                                      self.drift)
+
+        emittances = np.array(emittances).reshape(-1,1)
+        scalar_data = np.hstack([*sdata, emittances])
         data =  pd.DataFrame(data = scalar_data,
                              columns = self.output_names)
         
