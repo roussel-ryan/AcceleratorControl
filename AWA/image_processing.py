@@ -22,6 +22,45 @@ def weighted_std(values, weights):
     variance = np.average((values-average)**2, weights=weights)
     return np.sqrt(variance)
 
+def process_and_fit(image, min_size = 500)
+    logger = logging.getLogger(__name__)
+    
+    image = image.astype(np.float)
+    
+    smoothed_image = filters.gaussian(image, 3)
+    
+    triangle_threshold = filters.threshold_triangle(smoothed_image)
+    logger.debug(f'triangle_threshold: {triangle_threshold}')
+    thresholded_image = np.where(smoothed_image > triangle_threshold * 1.0, 1, 0)
+    
+    
+    #find contours
+    cnts, huers = cv2.findContours(blob_fitting_image, cv2.RETR_EXTERNAL,
+                                   cv2.CHAIN_APPROX_SIMPLE)[-2:]
+
+    #fit ellipses
+    ellipses = []
+    for cnt in cnts:
+        if cv2.contourArea(cnt) > min_size:
+            ellipse = cv2.fitEllipse(cnt)
+            ellipses += [ellipse]
+
+    n_blobs = len(ellipses)
+
+    verbose = True
+    if verbose:
+        fig,ax = plt.subplots(1,4)
+        c = ax[0].imshow(image)
+        ax[1].imshow(smoothed_image)
+        ax[2].imshow(thresholded_image)        
+        
+        fig.colorbar(c)
+        plt.show()
+    
+    
+
+    return image, n_blobs, ellipses
+
 def check_image(image, verbose = False, n_blobs_required = 1):
     '''
     Note: use this with a sub-image ROI
@@ -33,44 +72,12 @@ def check_image(image, verbose = False, n_blobs_required = 1):
 
 
     '''
+    image, n_blobs, ellipses = process_and_fit(image)
 
-    logger = logging.getLogger(__name__)
-    
-    image = image.astype(np.float)
-    
-    smoothed_image = filters.gaussian(image, 3)
-    #apply a gaussian filter
-    #if the normalized difference is below 0.01 then there is no beam / beam is too big
-    #width = (np.max(image) - np.min(image)) / np.mean(image)
-    #logger.debug(f'smoothed amplitude: {width}')    
-    #if width < 0.01:
-    #    logger.warning('no beam detected')
-    #    return 0
-
-    #apply triangle threshold to determine beam locations
-    triangle_threshold = filters.threshold_triangle(smoothed_image)
-    logger.debug(f'triangle_threshold: {triangle_threshold}')
-    thresholded_image = np.where(smoothed_image > triangle_threshold * 1.5, 1, 0)
-    
-    dilated_binary, n_blobs = get_blobs(thresholded_image)
-    
-    verbose = True
-    if verbose:
-
-        fig,ax = plt.subplots(1,4)
-        c = ax[0].imshow(image)
-        ax[1].imshow(smoothed_image)
-        ax[2].imshow(dilated_binary)        
-        #add ellipses
-        
-        
-        fig.colorbar(c)
-        plt.show()
     
     if n_blobs < n_blobs_required:
-        logger.warning(f'too few blobs detected! detecting {n_blobs} n_blobs')
+        logger.warning(f'too few blobs detected! detected {n_blobs} n_blobs')
         return 0
-    
     
         
     #get the projected std of both x and y
@@ -97,7 +104,6 @@ def check_image(image, verbose = False, n_blobs_required = 1):
     if zero_surrounded(dilated_binary):
         return 1
     else:
-        
         logger.warning('ROI is clipping the beam envelope')
         return 0
 
@@ -119,40 +125,13 @@ def get_blobs(image):
     
 def rotate_beamlets(image):
     logger = logging.getLogger(__name__)
+    image, n_blobs, ellipses = process_and_fit(image, min_size = 500)
     
-    image = image.astype(np.float)
     
-    smoothed_image = filters.gaussian(image, 3)
-
-    #apply triangle threshold to determine beam locations
-    triangle_threshold = filters.threshold_triangle(smoothed_image)
-    logger.debug(f'triangle_threshold: {triangle_threshold}')
-
-    blob_fitting_image = np.where(smoothed_image > triangle_threshold*1.0 , 1 ,0).astype('uint8')
-    
-    #find contours
-    cnts, huers = cv2.findContours(blob_fitting_image, cv2.RETR_EXTERNAL,
-                                   cv2.CHAIN_APPROX_SIMPLE)[-2:]
-    
-    angles = []
-    for cnt in cnts:
-        if cv2.contourArea(cnt) > 500:
-            ellipse = cv2.fitEllipse(cnt)
-            angles += [ellipse[2]]
-        
-    angles = np.array(angles)
-    
-    if len(angles) == 0:
-        fig,ax = plt.subplots(1,2)
-        ax[0].imshow(image)
-        ax[1].imshow(blob_fitting_image)
-        
-    mean_angle = np.mean(angles)
+    mean_angle = np.mean(np.array([ele[-1] for ele in ellipses]))
     rotated_image = transform.rotate(image, mean_angle - 90.0)
     
-    
-        
-    return rotated_image, mean_angle - 90.0
+    return rotated_image, mean_angle - 90.0, n_blobs
     
 
 if __name__ == '__main__':
