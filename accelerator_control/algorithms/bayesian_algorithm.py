@@ -143,14 +143,14 @@ class BayesianAlgorithm(algorithm.Algorithm):
                 
         return self.gp
 
-    def plot_model(self, obj_idx):
+    def plot_model(self, obj_idx, normalize = True):
         #NOTE: ONLY WORKS FOR 2D INPUT SPACES
 
         X, f = self.get_data(normalize_f = self.f_flags)
         
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(1,2)
 
-        n = 25
+        n = 50
         x = [np.linspace(0, 1, n) for e in [0,1]]
 
         xx,yy = np.meshgrid(*x)
@@ -161,16 +161,37 @@ class BayesianAlgorithm(algorithm.Algorithm):
         not_nan_idx = torch.nonzero(~torch.isnan(f[:,obj_idx]))            
         train_f = f[not_nan_idx, obj_idx]
         train_x = X[not_nan_idx].squeeze()
+        #train_x = X
 
         
         with torch.no_grad():
             pred = self.gp.posterior(pts)
             f = pred.mean
+            var = torch.sqrt(pred.variance)
+         
+        if normalize:
+            self.f_transformers[obj_idx].backward(f[:,obj_idx].numpy().reshape(-1,1))
+            c = ax.pcolor(xx,yy,f[:,obj_idx].detach().reshape(n,n))
+            fig.colorbar(c)
+        else:
+            f = self.f_transformers[obj_idx].backward(f[:,obj_idx].detach().numpy().reshape(-1,1))
+            var = self.f_transformers[obj_idx].backward(var[:,obj_idx].detach().numpy().reshape(-1,1))
 
-        c = ax.pcolor(xx,yy,f[:,obj_idx].detach().reshape(n,n))
-        ax.plot(*train_x.T,'+')
+            c1 = ax[0].pcolor(xx,yy,f.reshape(n,n))
+            c2 = ax[1].pcolor(xx,yy,var.reshape(n,n))
+            
+            fig.colorbar(c1,ax = ax[0])
+            fig.colorbar(c2,ax = ax[1])
+            
+            ax[0].set_title('Mean')
+            ax[1].set_title('Standard Deviation')
+        
+        for a in ax:
+            a.plot(*train_x.T,'C1+')
+            a.plot(*train_x.T,'C1+')
 
-        fig.colorbar(c)
+            a.set_xlabel(self.parameter_names[0].name)
+            a.set_ylabel(self.parameter_names[1].name)
         
 
     

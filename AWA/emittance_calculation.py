@@ -48,7 +48,7 @@ def calculate_emittance(image, scale, slit_sep, drift):
     proj = np.where(orig_proj > triangle_threshold, orig_proj, 0)
 
     #plot proj if in debugging
-    if 1:
+    if 0:
         fig,ax = plt.subplots(1,2)
         ax[0].plot(orig_proj)
         ax[1].plot(proj)

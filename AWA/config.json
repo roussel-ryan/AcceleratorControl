@@ -16,6 +16,22 @@
                 0.0,
                 2.5
             ]
+        },
+        {  
+            "name": "LinacPhase",
+            "channel": "SMCtrl:AWA:abs03",
+            "bounds": [
+                -640,
+                640
+            ]
+        },
+        {  
+            "name": "DQ5",
+            "channel": "AWA:Bira3Ctrl:Ch04",
+            "bounds": [
+                -1.0,
+                1.5
+            ]
         }
     ]
 }

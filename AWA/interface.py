@@ -1,7 +1,7 @@
 import numpy as np
 import sys, os
 sys.path.append('\\'.join(os.getcwd().split('\\')[:-1]))
-
+import time
 
 from accelerator_control import interface
 
@@ -29,6 +29,8 @@ class AWAInterface(interface.AcceleratorInterface):
     FMHML=10000
     TempVal=0.0
     Testing=False
+    
+    USBDIO = client.Dispatch('USBDIOCtrl.Application')
 
     def __init__(self,UseFrameGrabber = True, Testing = False):
         self.logger = logging.getLogger(__name__)
@@ -161,6 +163,9 @@ class AWAInterface(interface.AcceleratorInterface):
                 ready = select.select([self.m_CameraClient], [], [], 2)
 
                 if ready[0]:  
+                    #gate measurement
+                    self.USBDIO.SetReadyState(2,1)
+                    
                     #check charge on ICT1 is within bounds or charge bounds is not specified (target charge < 0)
                     #ICT1_charge = caget(f'AWAICTMon:Ch1')
                     ICT1_charge = 0
@@ -169,30 +174,29 @@ class AWAInterface(interface.AcceleratorInterface):
                         a = self.m_CameraClient.recv(1024)
                         #print(a)
                         b = "".join(chr(x) for x in a)
-                        try:
-                            c = eval(b)
-                        
-                            self.FWHMX[NShots] = c['FWHMX']
-                            self.FWHMY[NShots] = c['FWHMY']
-                            self.FWHML[NShots] = c['FWHML']
-                            self.CentroidX[NShots] = c['CX']
-                            self.CentroidY[NShots] = c['CY']
-                            self.NewMeasurement = True
-                            self.img += [self.GetImage()]
-                            
-                            #get charge
-                            for i in range(1,5):
-                                self.charge[NShots, i - 1] = caget(f'AWAICTMon:Ch{i}')
-    
-                            #get ROI
-                            ROI = self.GetROI()
-                            
-                            self.logger.debug(ROI)
-                            
-                            NShots += 1
 
-                        except SyntaxError:
-                            time.sleep(1)
+                        c = eval(b)
+                    
+                        self.FWHMX[NShots] = c['FWHMX']
+                        self.FWHMY[NShots] = c['FWHMY']
+                        self.FWHML[NShots] = c['FWHML']
+                        self.CentroidX[NShots] = c['CX']
+                        self.CentroidY[NShots] = c['CY']
+                        self.NewMeasurement = True
+                        self.img += [self.GetImage()]
+                        
+                        #get charge
+                        for i in range(1,5):
+                            self.charge[NShots, i - 1] = caget(f'AWAICTMon:Ch{i}')
+
+                        #get ROI
+                        ROI = self.GetROI()
+                        
+                        self.logger.debug(ROI)
+                        
+                        NShots += 1
+
+
                         
                     else:
                         #if we are considering charge limits then print a warning
@@ -202,6 +206,8 @@ class AWAInterface(interface.AcceleratorInterface):
                                                 f'[{0.9*target_charge},'\
                                                 f'{1.1*target_charge}], sample not counted') 
 
+                    self.USBDIO.SetReadyState(2,0)
+                    
                 else:
                     self.logger.warning('camera client not ready for data')
 

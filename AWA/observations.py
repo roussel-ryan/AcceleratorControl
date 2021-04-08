@@ -13,7 +13,7 @@ import image_processing
 
 class AWAScreen(observations.GroupObservation):
     def __init__(self, target_charge = -1, charge_deviation = 0.1,
-                 image_directory = None, n_samples = 1,
+                 image_directory = 'pics', n_samples = 1,
                  name = 'AWAScreen', additional_outputs = []):
 
         '''
@@ -55,29 +55,26 @@ class AWAScreen(observations.GroupObservation):
         self.target_charge = target_charge
         self.charge_deviation = charge_deviation
         
+        self.image_directory = image_directory        
+
+        super().__init__(name, outputs, n_samples)
+
+    def save_images(self, images, sdata):
         #determine if we are saving images
-        self.image_directory = image_directory
         if self.image_directory == None:
             self.save_image_flag = False
         else:
             self.save_image_flag = True
-
             
-        super().__init__(name, outputs, n_samples)
-
-    def save_image(self, images, sdata):
-        ctime = int(time.time())
-
         self.logger.debug(f'saving image data to {self.image_directory}')
-        for i in range(self.n_samples):
-            fname = f'{self.image_directory}/img_{ctime}_{i}.h5'
-            with h5py.File(fname, 'w') as f:
-
-                f.create_dataset('raw', data = images[i])
+        fname = f'{self.image_directory}/img_{self.observation_index}.h5'
+        with h5py.File(fname, 'w') as f:
+            for i in range(self.n_samples):    
+                dset = f.create_dataset(f'image_{i}', data = images[i])
 
                 #add attrs
-                #for name, item in zip(self.output_names, sdata):
-                #    dset.attrs[name] = item[:,i]
+                for name, item in zip(self.output_names, sdata[i]):
+                    dset.attrs[name] = item
 
     def apply_ROI(self, image, ROI_coords):
         '''
@@ -165,7 +162,7 @@ class AWAScreen(observations.GroupObservation):
         
         if self.save_image_flag:
             self.save_image(images, scalar_data)
-
+        self.observation_index += 1
         return data
 
     
@@ -209,7 +206,7 @@ class Emittance(AWAScreen):
         calculate emittance from screen measurement
 
         '''
-        n_blobs_required = 5
+        n_blobs_required = 4
         images, scalar_data = self._get_and_check_data(controller,
                                                        n_blobs_required)
 
@@ -221,7 +218,7 @@ class Emittance(AWAScreen):
         for i in range(len(images)):
             if scalar_data[i,-1] == 1.0:
                 #rotate images to align beamlets to axis
-                img, angle = image_processing.rotate_beamlets(images[i])
+                img, angle, n_blobs = image_processing.rotate_beamlets(images[i])
                 rotation_angles += [angle]
                 self.logger.info(f'rotation_angle: {rotation_angles[i]:.2f}')
                 
@@ -242,7 +239,8 @@ class Emittance(AWAScreen):
         scalar_data = np.hstack([scalar_data, emittances, rotation_angles])
         data =  pd.DataFrame(data = scalar_data,
                              columns = self.output_names)
+        self.observation_index += 1
         
-        #self.save_image(data_pkt)        
+        self.save_images(images, scalar_data)        
 
         return data

@@ -2,6 +2,7 @@ import numpy as np
 import torch
 import logging
 import time
+import os
 
 from .. import observations
 from .. import parameter
@@ -52,6 +53,14 @@ class Algorithm:
         self.n_observations = len(self.observations)
         self.n_steps = kwargs.get('n_steps',10) 
         self.pre_observation_function = kwargs.get('pre_observation_function', None)
+        self.save_images = kwargs.get('save_data', False)
+        
+        
+        if self.save_images:
+            directory = 'pics/run_{time.time:d}'
+            os.mkdir(directory)
+            for ele in self.observations:
+                ele.image_directory = directory
         
         
     def create_model(self):

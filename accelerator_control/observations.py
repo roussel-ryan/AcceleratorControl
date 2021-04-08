@@ -38,6 +38,7 @@ class Observation:
     def __init__(self, name, n_samples = 1):
         self.name = name
         self.is_child = False
+        self.observation_index = 0
         
     def add_parent(self, parent):
         '''adds parent to observation -> self._call__ is not necessary'''
@@ -74,6 +75,7 @@ class GroupObservation:
         self.children = []
         self.n_samples = n_samples
         self.is_child = False
+        self.observation_index = 0
         
         self.output_names = output_names
 
