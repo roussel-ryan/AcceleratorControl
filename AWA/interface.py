@@ -167,36 +167,38 @@ class AWAInterface(interface.AcceleratorInterface):
                     self.USBDIO.SetReadyState(2,1)
                     
                     #check charge on ICT1 is within bounds or charge bounds is not specified (target charge < 0)
-                    #ICT1_charge = caget(f'AWAICTMon:Ch1')
-                    ICT1_charge = 0
-                    if (np.abs(ICT1_charge - target_charge) < charge_deviation * target_charge) or (target_charge < 0):
+                    ICT1_charge = caget(f'AWAICTMon:Ch1')
+                    if (np.abs(ICT1_charge - target_charge) < np.abs(charge_deviation * target_charge)) or (target_charge < 0):
                         
                         a = self.m_CameraClient.recv(1024)
                         #print(a)
                         b = "".join(chr(x) for x in a)
-
-                        c = eval(b)
+                        try:
+                            c = eval(b)
                     
-                        self.FWHMX[NShots] = c['FWHMX']
-                        self.FWHMY[NShots] = c['FWHMY']
-                        self.FWHML[NShots] = c['FWHML']
-                        self.CentroidX[NShots] = c['CX']
-                        self.CentroidY[NShots] = c['CY']
-                        self.NewMeasurement = True
-                        self.img += [self.GetImage()]
+                            self.FWHMX[NShots] = c['FWHMX']
+                            self.FWHMY[NShots] = c['FWHMY']
+                            self.FWHML[NShots] = c['FWHML']
+                            self.CentroidX[NShots] = c['CX']
+                            self.CentroidY[NShots] = c['CY']
+                            self.NewMeasurement = True
+                            self.img += [self.GetImage()]
+                            
+                            #get charge
+                            for i in range(1,5):
+                                self.charge[NShots, i - 1] = caget(f'AWAICTMon:Ch{i}')
+    
+                            #get ROI
+                            ROI = self.GetROI()
+                            
+                            self.logger.debug(ROI)
                         
-                        #get charge
-                        for i in range(1,5):
-                            self.charge[NShots, i - 1] = caget(f'AWAICTMon:Ch{i}')
+                            NShots += 1
 
-                        #get ROI
-                        ROI = self.GetROI()
-                        
-                        self.logger.debug(ROI)
-                        
-                        NShots += 1
-
-
+                        except SyntaxError:
+                            self.logger.warning('sleeping!')
+                            time.sleep(1)
+                            
                         
                     else:
                         #if we are considering charge limits then print a warning

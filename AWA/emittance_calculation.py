@@ -45,13 +45,15 @@ def calculate_emittance(image, scale, slit_sep, drift):
         ax[1].imshow(image)
         print(image)
     logger.debug(f'triangle_threshold: {triangle_threshold}')
-    proj = np.where(orig_proj > triangle_threshold, orig_proj, 0)
+    proj = np.where(orig_proj > triangle_threshold + 0.05, orig_proj, 0)
+    #proj = orig_proj
 
     #plot proj if in debugging
     if 0:
-        fig,ax = plt.subplots(1,2)
-        ax[0].plot(orig_proj)
-        ax[1].plot(proj)
+        fig,ax = plt.subplots(1,3)
+        ax[0].imshow(image)
+        ax[1].plot(orig_proj)
+        ax[2].plot(proj)
         
         plt.show()
 
@@ -94,19 +96,24 @@ def calculate_emittance(image, scale, slit_sep, drift):
     sorted_idx = np.argsort(b)
     a,b,c = a[sorted_idx],b[sorted_idx],c[sorted_idx]
 
+    logger.debug(f'mean beamlet with_px: {np.mean(c)}')
+    logger.debug(a)
+    logger.debug(b)
+    logger.debug(c)
     #convert pixel lengths to meters
     b = b * scale
     c = c * scale
 
     #define slit locations
     x_slit_m = np.linspace(-(n_blobs-1)/2*slit_sep, (n_blobs-1)/2*slit_sep, n_blobs)
-
+    logger.debug(x_slit_m)
     #calculate beam centroid at slits
     ixi = np.sum(a * x_slit_m) / np.sum(a)
 
     #center b coords on beam center on screen
     b = b - np.average(b, weights = a)
-
+    logger.debug(b)
+    
     #calculate rms spread at slits
     ixxi = np.sum(a * (x_slit_m - ixi)**2) / np.sum(a)
 
@@ -120,7 +127,8 @@ def calculate_emittance(image, scale, slit_sep, drift):
     sp = c / drift
 
     #calc rms divergence at slits
-    ixpxpi = np.sum(a * sp**2 + a * (xp - ixpi)**2) / np.sum(a)
+    ixpxpi = np.sum(a * sp**2) / np.sum(a)
+    #ixpxpi = np.sum(a * sp**2 + a * (xp - ixpi)**2) / np.sum(a)
 
     #calc correlation term at slits
     ixxpi = (np.sum(a * x_slit_m * xp) - np.sum(a) * ixi *ixpi) / np.sum(a)
@@ -133,10 +141,11 @@ def calculate_emittance(image, scale, slit_sep, drift):
     logger.debug(f'ixxpi:{ixxpi}')
 
     #calculate emittance
-    emittance = np.sqrt(ixxi * ixpxpi - ixxpi**2)
+    #emittance = np.sqrt(ixxi * ixpxpi - ixxpi**2)
+    emittance = np.sqrt(ixxi * ixpxpi)
     logger.info(f'calculated emittance: {emittance:.2e}, n_peaks:{len(peaks)}')
 
-    return emittance
+    return emittance, ixxi, ixpxpi, ixxpi
 
 
 if __name__ == '__main__':

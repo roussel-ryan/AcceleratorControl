@@ -2,6 +2,7 @@ import numpy as np
 import torch
 import logging
 import matplotlib.pyplot as plt
+import time
 
 from . import algorithm
 from .. import transformer
@@ -75,7 +76,8 @@ class BayesianAlgorithm(algorithm.Algorithm):
         
         
     def create_model(self, one_removed = False):
-        
+        self.logger.info('creating model')
+        t = time.time()
         X, f = self.get_data(normalize_f = self.f_flags)
         f = self.f_multiplier * f
         
@@ -140,7 +142,7 @@ class BayesianAlgorithm(algorithm.Algorithm):
                 
             #create list model
             self.gp = ModelListGP(*models)
-                
+        self.logger.info(f'done training model - training time {time.time() - t:.2f} s')
         return self.gp
 
     def plot_model(self, obj_idx, normalize = True):

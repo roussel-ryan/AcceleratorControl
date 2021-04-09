@@ -22,15 +22,18 @@ def weighted_std(values, weights):
     variance = np.average((values-average)**2, weights=weights)
     return np.sqrt(variance)
 
-def process_and_fit(image, min_size = 500):
+def process_and_fit(image, min_size = 800):
     logger = logging.getLogger(__name__)
     
     
     smoothed_image = filters.gaussian(image, 3)
-    
+
     triangle_threshold = filters.threshold_triangle(smoothed_image)
     logger.debug(f'triangle_threshold: {triangle_threshold}')
-    thresholded_image = np.where(smoothed_image > triangle_threshold * 1.0, 1, 0)
+    thresholded_image = np.where(smoothed_image > triangle_threshold, 1, 0)
+    smoothed_image = np.where(smoothed_image > triangle_threshold, 
+                              smoothed_image,0)
+    #thresholded_image = np.where(smoothed_image > 0, 1, 0)
     
     thresholded_image = remove_small_blobs(thresholded_image, min_size)
     thresholded_image = thresholded_image.astype(np.uint8)
@@ -42,7 +45,9 @@ def process_and_fit(image, min_size = 500):
     #fit ellipses
     ellipses = []
     for cnt in cnts:
-        if cv2.contourArea(cnt) > min_size:
+        blob_area = cv2.contourArea(cnt)
+        logger.debug(f'blob area: {blob_area}')
+        if  blob_area > min_size:
             ellipse = cv2.fitEllipse(cnt)
             ellipses += [ellipse]
 
@@ -58,7 +63,7 @@ def process_and_fit(image, min_size = 500):
         fig.colorbar(c)
         plt.show()
     
-    return thresholded_image, n_blobs, ellipses
+    return thresholded_image, smoothed_image, n_blobs, ellipses
 
 def check_image(image, verbose = False, n_blobs_required = 1):
     '''
@@ -72,10 +77,10 @@ def check_image(image, verbose = False, n_blobs_required = 1):
 
     '''
     logger = logging.getLogger(__name__)
-    image, n_blobs, ellipses = process_and_fit(image)
+    timage, simage, n_blobs, ellipses = process_and_fit(image)
 
    
-    if np.count_nonzero(image > 65400) > 500 :
+    if np.count_nonzero(simage > 65400) > 200 :
         logger.warning(f'image saturated')
         return 0
     
@@ -85,8 +90,8 @@ def check_image(image, verbose = False, n_blobs_required = 1):
     
         
     #get the projected std of both x and y
-    proj_x = np.sum(image, axis = 0)
-    proj_y = np.sum(image, axis = 1)
+    proj_x = np.sum(simage, axis = 0)
+    proj_y = np.sum(simage, axis = 1)
     
     #calculate stds
     x_len = len(proj_x)
@@ -94,18 +99,13 @@ def check_image(image, verbose = False, n_blobs_required = 1):
     std_x = weighted_std(np.arange(x_len), proj_x)
     std_y = weighted_std(np.arange(y_len), proj_y)
     
-    std_scale = 2.5
-    side_scale = 0.65
-    logger.debug(std_x*std_scale)
-    logger.debug(x_len * side_scale)
-    logger.debug(std_y*std_scale)
-    logger.debug(y_len * side_scale)
-    if (std_x*std_scale > side_scale* x_len) or (std_y*std_scale > side_scale*y_len):
+    len_factor = 5
+    if (std_x*len_factor > x_len ) or (std_y*len_factor > y_len):
         logger.warning('beam too diffuse')
         return 0
     
     #if there is no beam on the edges
-    if zero_surrounded(image):
+    if zero_surrounded(timage):
         return 1
     else:
         logger.warning('ROI is clipping the beam envelope')
@@ -126,11 +126,11 @@ def remove_small_blobs(image, min_size):
     
 def rotate_beamlets(image):
     logger = logging.getLogger(__name__)
-    image, n_blobs, ellipses = process_and_fit(image, min_size = 500)
+    timage, simage, n_blobs, ellipses = process_and_fit(image, min_size = 500)
     
     
     mean_angle = np.mean(np.array([ele[-1] for ele in ellipses]))
-    rotated_image = transform.rotate(image, mean_angle - 90.0)
+    rotated_image = transform.rotate(simage, mean_angle - 90.0)
     
     return rotated_image, mean_angle - 90.0, n_blobs
     

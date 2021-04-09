@@ -28,24 +28,29 @@ def main():
     emittance_obs = observations.Emittance(0.002, 
                                            2.84, 
                                            1086, 
-                                           n_samples = 5)
+                                           n_samples = 5,
+                                           target_charge = -6.5e-9,
+                                           charge_deviation = 0.05)
     
     #scan_vals = np.array(((8.3, 1.2),
     #                      (8.3, 1.4),
     #                      (8.3, 1.6)))
-    #scan_vals = np.array(((7.2, 1.0))).reshape(1,-1)
+    #scan_vals1 = np.array(((8.84, 0.37, 0.0))).reshape(1,-1)
     scan_vals = np.random.rand(10,3)
+    #scan_vals = np.linspace(-0.05,0.3,10).reshape(-1,1)
     
     param = c.get_named_parameters(['FocusingSolenoid',
                                     'MatchingSolenoid',
                                     'DQ5'])
+    
+    #param = c.get_named_parameters(['DQ5'])
     pre_observation_func = pre_observation.Sleep(5)
     #pre_observation_func = pre_observation.KeyPress()
    
     if 0:
         sampling = sample.Sample(param,
                                  [screen_obs],
-                                 c, scan_vals,
+                                 c, scan_vals1,
                                  normalized = False,
                                  pre_observation_function = pre_observation_func)
         sampling.run()
@@ -69,15 +74,15 @@ def main():
                                        c,
                                        [roi_constraint],
                                        n_steps = 50,
-                                       sigma = 100.0)
-    if 0:
+                                       sigma = 100)
+    if 1:
         bexp.run()
         #model = bexp.create_model()
         #bexp.get_acq(model, True)
     
     #c.load_data('data/good_3_parameter_exploration.pkl')
-    #print(c.data[['MatchingSolenoid','FocusingSolenoid','LinacPhase',
-    #              'EMIT','IMGF','ROT_ANG']])
+    print(c.data[['MatchingSolenoid','FocusingSolenoid','LinacPhase',
+                  'EMIT','IMGF','ROT_ANG']])
     #print(c.data)
     model = bexp.create_model()
     models = model.models

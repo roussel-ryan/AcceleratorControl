@@ -198,7 +198,7 @@ class Emittance(AWAScreen):
         self.m_per_px = 25.4e-3 / screen_width_px
             
         super().__init__(name = 'EMIT',
-                         additional_outputs = ['EMIT','ROT_ANG'], **kwargs)
+                         additional_outputs = ['EMIT','IXXI','IXPXPI','IXXPI','ROT_ANG'], **kwargs)
         
     
     def __call__(self, controller):
@@ -230,10 +230,13 @@ class Emittance(AWAScreen):
                                                                   self.drift)]
                 
             else:
-                emittances += [np.nan]
+                emittances += [np.nan*np.ones(4)]
                 rotation_angles += [np.nan]
 
-        emittances = np.array(emittances).reshape(-1,1)
+        emittances = np.array(emittances).reshape(-1,4)
+        #cut out any meaurements of the emittance over 5e-7
+        #emittances = np.where(emittances > 5e-7, np.nan, emittances).reshape(-1,1)
+        
         rotation_angles = np.array(rotation_angles).reshape(-1,1)
 
         scalar_data = np.hstack([scalar_data, emittances, rotation_angles])

@@ -96,7 +96,9 @@ class BayesianExploration(bayesian_algorithm.BayesianAlgorithm):
         acq = self.get_acq(model)
         bounds = torch.stack([torch.zeros(self.n_parameters),
                               torch.ones(self.n_parameters)])
+        return self.optimize(acq, bounds)
     
+    def optimize(self, acq, bounds):
         #sometimes this can fail due to PSDError, if it does try doing it again with
         #one less point
         try:
@@ -107,9 +109,7 @@ class BayesianExploration(bayesian_algorithm.BayesianAlgorithm):
             self.logger.warning('Non PSD matrix in model, try to recreate with one less point')
             model = self.create_model(True)
             acq = self.get_acq(model)
-            candidate, acq_value = optimize_acqf(acq, bounds = bounds,
-                                                 q=1, num_restarts = 20,
-                                                 raw_samples = 20)
+            candidate = self.optimize(acq, bounds)
             
         return candidate
     
