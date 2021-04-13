@@ -1,9 +1,10 @@
-import numpy as np
-import time
-import h5py
-import sys, os
-import pandas as pd
 import logging
+import os
+import sys
+
+import h5py
+import numpy as np
+import pandas as pd
 
 sys.path.append('\\'.join(os.getcwd().split('\\')[:-1]))
 
@@ -14,7 +15,7 @@ import image_processing
 
 
 def apply_roi(image, roi_coords):
-    '''
+    """
     get portion of image that is inside region of interest rectangle
 
     Arguments
@@ -27,15 +28,14 @@ def apply_roi(image, roi_coords):
         ((x1,y1),(x2,y2)) where (x1,y1) is the lower left corner
         and (x2,y2) is the upper right corner
 
-    '''
-    return image.T[roi_coords[0, 0]:roi_coords[1, 0],
-           roi_coords[0, 1]:roi_coords[1, 1]].T
+    """
+    return image.T[roi_coords[0, 0]:roi_coords[1, 0], roi_coords[0, 1]:roi_coords[1, 1]].T
 
 
 class AWAScreen(observations.GroupObservation):
     def __init__(self, target_charge=-1, charge_deviation=0.1,
                  image_directory='pics', n_samples=1,
-                 name='AWAScreen', additional_outputs=[]):
+                 name='AWAScreen', additional_outputs=None):
 
         """
         AWAScreen measurement class - extends GroupObservation for AWA
@@ -64,6 +64,8 @@ class AWAScreen(observations.GroupObservation):
 
         """
 
+        if additional_outputs is None:
+            additional_outputs = []
         self.logger = logging.getLogger(__name__)
 
         outputs = ['FWHMX',
@@ -94,10 +96,10 @@ class AWAScreen(observations.GroupObservation):
                 f[''].attrs[name] = item
 
             for i in range(self.n_samples):
-                dset = f.create_dataset(f'image_{i}', data=images[i])
+                f.create_dataset(f'image_{i}', data=images[i])
 
     def _get_and_check_data(self, controller, n_blobs_required=1):
-        '''
+        """
         Get data from the controller_interface and check its validity
 
         Check the following:
@@ -106,10 +108,10 @@ class AWAScreen(observations.GroupObservation):
 
         NOTE: we consider charge in the controller_interface so that measurements can be repeated quickly
 
-        If one of these conditions are not met then set 'IMGF' to 0 and return Nans for the 
+        If one of these conditions are not met then set 'IMGF' to 0 and return Nans for the
         beamsize/location data.
 
-        '''
+        """
         images, sdata, roi = controller.interface.GetNewImage(self.target_charge,
                                                               self.charge_deviation,
                                                               NSamples=self.n_samples)
@@ -127,10 +129,15 @@ class AWAScreen(observations.GroupObservation):
         for i in range(self.n_samples):
             roi_images += [apply_roi(images[i], roi)]
 
+        # process and identify blobs in image
         # check that a beam exists and is inside the roi for each image
+        min_size = 800
         for i in range(len(images)):
-            if not image_processing.check_image(roi_images[i], False, n_blobs_required):
-                good_image[i] = 0
+            timg, simg, n_blobs, elips = image_processing.process_and_fit(roi_images[i],
+                                                                          min_size)
+
+            good_image[i] = image_processing.check_image(timg, simg,
+                                                         n_blobs, n_blobs_required)
 
         invalid_image_idx = np.nonzero(1.0 - good_image)[0]
         self.logger.debug(f'invalid image idx: {invalid_image_idx}')
@@ -147,13 +154,13 @@ class AWAScreen(observations.GroupObservation):
         return roi_images, scalar_data
 
     def __call__(self, controller, param_dict):
-        '''
+        """
         Do screen measurement using controller_interface
 
-        '''
+        """
         images, scalar_data = self._get_and_check_data(controller)
 
-        data_dict = dict(zip(self.output_names, scalar_data)) + param_dict
+        data_dict = dict(zip(self.output_names, scalar_data)).update(param_dict)
 
         data = pd.DataFrame(data_dict)
 
@@ -167,7 +174,7 @@ class AWAScreen(observations.GroupObservation):
 
 class Emittance(AWAScreen):
     def __init__(self, slit_sep, drift, screen_width_px, **kwargs):
-        '''
+        """
         Vertical emittance observation and calculation using multi-slit
         diagnostic
 
@@ -181,14 +188,14 @@ class Emittance(AWAScreen):
 
         slit_sep : float
             Slit separation in meters
-        
+
         drift : float
             Longitudinal distance between slits and YAG screen
 
         image_directory : str, Default None
             Directory to save screen images in
 
-        '''
+        """
 
         self.slit_sep = slit_sep
         self.drift = drift
@@ -199,11 +206,11 @@ class Emittance(AWAScreen):
         super().__init__(name='EMIT',
                          additional_outputs=['EMIT', 'IXXI', 'IXPXPI', 'IXXPI', 'ROT_ANG'], **kwargs)
 
-    def __call__(self, controller):
-        '''
+    def __call__(self, controller, **kwargs):
+        """
         calculate emittance from screen measurement
 
-        '''
+        """
         n_blobs_required = 4
         images, scalar_data = self._get_and_check_data(controller,
                                                        n_blobs_required)

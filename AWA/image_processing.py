@@ -1,9 +1,10 @@
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy import ndimage
-from skimage import data, feature, measure, filters, morphology, transform
 import logging
+
 import cv2
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy import ndimage
+from skimage import filters, transform
 
 
 def zero_surrounded(array):
@@ -25,7 +26,7 @@ def weighted_std(values, weights):
     return np.sqrt(variance)
 
 
-def process_and_fit(image, min_size=800):
+def process_and_fit(image, min_size=800, verbose=False):
     """
     Process an image with a region of interest specified
     - smooths the image with a 3 px Gaussian filter
@@ -61,7 +62,6 @@ def process_and_fit(image, min_size=800):
 
     n_blobs = len(ellipses)
 
-    verbose = False
     if verbose:
         fig, ax = plt.subplots(1, 3)
         c = ax[0].imshow(image)
@@ -74,7 +74,7 @@ def process_and_fit(image, min_size=800):
     return thresholded_image, smoothed_image, n_blobs, ellipses
 
 
-def check_image(image, verbose=False, n_blobs_required=1):
+def check_image(timage, simage, n_blobs, n_blobs_required=1):
     """
     Note: use this with a sub-image ROI
 
@@ -86,7 +86,6 @@ def check_image(image, verbose=False, n_blobs_required=1):
 
     """
     logger = logging.getLogger(__name__)
-    timage, simage, n_blobs, ellipses = process_and_fit(image)
 
     if np.count_nonzero(simage > 65400) > 200:
         logger.warning(f'image saturated')
@@ -123,7 +122,6 @@ def remove_small_blobs(image, min_size):
     labels, n_blobs = ndimage.label(image)
     new_image = image.copy()
 
-    min_size = 500
     for i in range(1, n_blobs + 1):
         counts = np.count_nonzero(i == labels)
         if counts < min_size:

@@ -132,7 +132,7 @@ class Algorithm:
         """
         run the algorithm
         """
-        self.logger.info(f'Starting algorithm run with {self.n_steps} steps' + \
+        self.logger.info(f'Starting algorithm run with {self.n_steps} steps' +
                          f' and {n_samples} samples per step')
 
         for i in range(self.n_steps):
@@ -190,7 +190,7 @@ class Algorithm:
                 else:
                     required_observations += [obs]
 
-            self.logger.info('doing observations_list ' + \
+            self.logger.info('doing observations_list ' +
                              f'{[obs.name for obs in required_observations]}')
 
             for obs in required_observations:

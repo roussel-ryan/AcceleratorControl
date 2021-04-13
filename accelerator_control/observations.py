@@ -6,38 +6,39 @@ import pandas as pd
 
 
 class Observation:
-    '''
-    Observation function class that keeps track of function name and callable 
+    """
+    Observation function class that keeps track of function name and callable
     function to do the observation.
-    
+
     If this observation can be made simultaneously with other observations_list
-    using the same process pass it to a GroupObservation.add_child(). 
+    using the same process pass it to a GroupObservation.add_child().
     By default a observation has no parent =(.
-    
-    An example of a simultaneous observation is getting the x and y beamsize 
+
+    An example of a simultaneous observation is getting the x and y beamsize
     from a single image.
 
-    If is_child is true, calls to this observation will execute the 
-    group callable method instead. 
-    
+    If is_child is true, calls to this observation will execute the
+    group callable method instead.
+
     This is done so that optimizers can call individual observations_list while
-    still passively collecting excess data during optimization. 
+    still passively collecting excess data during optimization.
 
     For use, overwrite __call__().
-    Observation callables return a pandas DataFrame object with 
+    Observation callables return a pandas DataFrame object with
     column names = to observation name.
-    
+
     Arguments
     ---------
     name : string
 
-    '''
+    """
 
     def __init__(self, name, n_samples=1):
         self.name = name
         self.is_child = False
         self.observation_index = 0
         self.n_samples = n_samples
+        self.parent = None
 
     def add_parent(self, parent):
         """adds parent to observation -> self._call__ is not necessary"""
@@ -46,15 +47,14 @@ class Observation:
         self.parent = parent
 
     def __call__(self, controller, param_dict):
-        '''
+        """
         do observation
 
         Arguments
         ---------
         controller : controller.Controller object
-        nsamples : number of samples to take
- 
-        '''
+
+        """
         if self.is_child:
             return self.parent()
         else:
@@ -62,13 +62,13 @@ class Observation:
 
 
 class GroupObservation:
-    ''' 
+    """
     group class for when multiple observations_list can be made simultaneously
     (for example multiple aspects of the beam can be measured at once w/ an image)
     - when a child observation is called the parent observation is called instead
     - child observation name is <parent name>.<child name>
 
-    '''
+    """
 
     def __init__(self, name, output_names, n_samples=1):
         self.name = name
@@ -85,12 +85,12 @@ class GroupObservation:
             self.add_child(obs)
 
     def __call__(self, controller, param_dict):
-        '''
-        
-        impliments observation procedure, 
+        """
+
+        impliments observation procedure,
         should return a pandas DataFrame object
 
-        '''
+        """
         raise NotImplementedError
 
     def add_child(self, child):
@@ -102,7 +102,7 @@ class GroupObservation:
 
 
 class TestSOBO(Observation):
-    '''observation class used for testing SOBO algorithm'''
+    """observation class used for testing SOBO algorithm"""
 
     def __init__(self, name='TestSOBO'):
         super().__init__(name)
@@ -114,12 +114,12 @@ class TestSOBO(Observation):
 
 
 class TestMOBO(GroupObservation):
-    '''
+    """
     observation class used for testing MOBO algorithm
-    '1' and '2' return ZDT1 values 
+    '1' and '2' return ZDT1 values
     '3' returns 0 if x[0] < 0.5, 1 otherwise
 
-    '''
+    """
 
     def __init__(self, name='TestMOBO', n_samples=1):
         output_names = ['1', '2', '3']

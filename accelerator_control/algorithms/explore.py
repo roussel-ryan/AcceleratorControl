@@ -1,31 +1,25 @@
 from abc import ABC
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 import torch
+from advanced_acquisition import binary_constraint, combine_acquisition, proximal
+from botorch.acquisition import UpperConfidenceBound
+from botorch.acquisition.objective import ScalarizedObjective
+from botorch.optim import optimize_acqf
+from gpytorch.utils.errors import NotPSDError
 
 from . import bayesian_algorithm
 
-from botorch.models import SingleTaskGP, FixedNoiseGP
-from botorch.fit import fit_gpytorch_model
-from gpytorch.mlls import ExactMarginalLogLikelihood
-from gpytorch.utils.errors import NotPSDError
-
-from botorch.acquisition.objective import ScalarizedObjective
-from botorch.acquisition import UpperConfidenceBound
-from botorch.optim import optimize_acqf
-
-from advanced_acquisition import binary_constraint, combine_acquisition, proximal
-
 
 class BayesianExploration(bayesian_algorithm.BayesianAlgorithm, ABC):
-    '''
+    """
     Conduct single objective bayesian exploration
 
-    '''
+    """
 
     def __init__(self, parameters, observations_list, controller, constraints, **kwargs):
-        '''
+        """
         Initialize optimizer
 
         Arguments
@@ -38,11 +32,11 @@ class BayesianExploration(bayesian_algorithm.BayesianAlgorithm, ABC):
 
         controller : controller.AWAController
              Controller object used to control the accelerator
- 
+
         constraints : list of observations.Observation
              Constraint observations
 
-        '''
+        """
 
         assert isinstance(observations_list, list)
         assert isinstance(constraints, list)
@@ -114,13 +108,12 @@ class BayesianExploration(bayesian_algorithm.BayesianAlgorithm, ABC):
 
         return candidate
 
-    def plot_acq(self, acq=None, obj_idx=0, ax=[]):
+    def plot_acq(self, acq=None, obj_idx=0, ax=None):
         # NOTE: ONLY WORKS FOR 2D INPUT SPACES
 
-        x, f = self.get_data(normalize_f=self.f_flags)
-
-        if ax is []:
+        if ax is None:
             fig, ax = plt.subplots()
+        x_data, f_data = self.get_data(normalize_f=self.f_flags)
 
         if acq is None:
             acq = self.get_acq(self.gp)
@@ -136,7 +129,7 @@ class BayesianExploration(bayesian_algorithm.BayesianAlgorithm, ABC):
         # not_nan_idx = torch.nonzero(~torch.isnan(f[:,obj_idx]))
         # train_f = f[not_nan_idx, obj_idx]
         # train_x = X[not_nan_idx].squeeze()
-        train_x = x
+        train_x = x_data
 
         with torch.no_grad():
             f = acq.forward(pts.unsqueeze(1))
