@@ -5,7 +5,7 @@ def main():
     #view_params()
     #define controller
     interf = interface.SLACInterface()
-    c = controller.Controller('config.json', interface = interf)
+    c = controller.Controller('config.json', controller_interface= interf)
 
     #get initial setpoint (set to minimum bound for each parameter as example
     initial = np.zeros(len(c.parameters))

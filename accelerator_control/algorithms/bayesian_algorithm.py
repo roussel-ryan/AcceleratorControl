@@ -24,7 +24,7 @@ class BayesianAlgorithm(algorithm.Algorithm):
 
     '''
 
-    def __init__(self, parameters, observations, controller,
+    def __init__(self, parameters, observations_list, controller,
                  constraints = [], **kwargs):
         '''
         Initialize optimizer
@@ -34,14 +34,14 @@ class BayesianAlgorithm(algorithm.Algorithm):
         parameters : list of parameters
              List of parameter.Parameter() objects used for optimization
 
-        objectives : list of observations.Observation
+        objectives : list of observations_list.Observation
              Objective objects to minimize
 
         controller : controller.AWAController
              Controller object used to control the accelerator
         
         constraints : list, optional
-            List of binary constraint observations, 1.0 if constraint is satisfied, 
+            List of binary constraint observations_list, 1.0 if constraint is satisfied,
             0.0 otherwise
 
         '''
@@ -58,7 +58,7 @@ class BayesianAlgorithm(algorithm.Algorithm):
         #if we want fixed noise
         self.fixed_noise = kwargs.get('fixed_noise', None)
         
-        super().__init__(parameters, observations + constraints, controller, **kwargs)
+        super().__init__(parameters, observations_list + constraints, controller, **kwargs)
 
         
         if self.fixed_noise == None:

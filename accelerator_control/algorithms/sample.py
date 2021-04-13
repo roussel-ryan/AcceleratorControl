@@ -19,7 +19,7 @@ class Sample(algorithm.Algorithm):
 
     '''
 
-    def __init__(self, parameters, observations, controller,
+    def __init__(self, parameters, observations_list, controller,
                  samples, normalized = False, **kwargs):
         '''
         Initialize algorithm
@@ -29,14 +29,14 @@ class Sample(algorithm.Algorithm):
         parameters : list of parameters
              List of parameter.Parameter() objects used for optimization
 
-        observations : list of observations.Observation
+        observations_list : list of observations_list.Observation
              Observation(s)
 
         controller : controller.AWAController
              Controller object used to control the accelerator
  
-        constraints : list of observations.Observation
-             Constraint observations
+        constraints : list of observations_list.Observation
+             Constraint observations_list
 
         normalized : bool, optional
              Specify if the list of samples is in normalized coordinates or not
@@ -45,9 +45,9 @@ class Sample(algorithm.Algorithm):
         '''
         assert len(parameters) == samples.shape[1]
         
-        super().__init__(parameters, observations, controller,
-             n_steps = len(samples),
-             **kwargs)
+        super().__init__(parameters, observations_list, controller,
+                         n_steps = len(samples),
+                         **kwargs)
 
         #check to make sure the dimensionality of samples matches
         #the number of parameters

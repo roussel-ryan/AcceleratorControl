@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 logging.basicConfig(level = logging.DEBUG)
 sobo_obs = observations.TestSOBO()
 
-c = controller.Controller('test2.json', interface = interface.TestInterface())
+c = controller.Controller('test2.json', controller_interface= interface.TestInterface())
 
 opt_params = c.get_named_parameters(['X1', 'X2'])
 

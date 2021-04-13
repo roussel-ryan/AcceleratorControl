@@ -12,7 +12,7 @@ class Observation:
     Observation function class that keeps track of function name and callable 
     function to do the observation.
     
-    If this observation can be made simultaneously with other observations 
+    If this observation can be made simultaneously with other observations_list
     using the same process pass it to a GroupObservation.add_child(). 
     By default a observation has no parent =(.
     
@@ -22,7 +22,7 @@ class Observation:
     If is_child is true, calls to this observation will execute the 
     group callable method instead. 
     
-    This is done so that optimizers can call individual observations while 
+    This is done so that optimizers can call individual observations_list while
     still passively collecting excess data during optimization. 
 
     For use, overwrite __call__().
@@ -63,7 +63,7 @@ class Observation:
 
 class GroupObservation:
     ''' 
-    group class for when multiple observations can be made simultaneously 
+    group class for when multiple observations_list can be made simultaneously
     (for example multiple aspects of the beam can be measured at once w/ an image)
     - when a child observation is called the parent observation is called instead
     - child observation name is <parent name>.<child name>
@@ -75,7 +75,7 @@ class GroupObservation:
 
         self.output_names = output_names
 
-        #add children observations
+        #add children observations_list
         for name in self.output_names:
             obs = Observation(name)
             self.add_child(obs)
@@ -117,17 +117,17 @@ class OTR2Profiles(GroupObservation):
         '''
         otr_base_pv = 'OTRS:IN20:571:'
         time.sleep(3)
-        xrms = controller.interface.get_PVs([otr_base_pv + 'XRMS'])[0]
-        yrms = controller.interface.get_PVs([otr_base_pv + 'YRMS'])[0]
+        xrms = controller.interface.get_pvs([otr_base_pv + 'XRMS'])[0]
+        yrms = controller.interface.get_pvs([otr_base_pv + 'YRMS'])[0]
         print('xrms:',xrms)
         print('yrms:',yrms)
         sigma_z = 0
 
         if self.measure_z:
-            controller.interface.set_TCAV(1)
+            controller.interface.set_tcav(1)
             time.sleep(3)
-            tcav_on_xrms = controller.interface.get_PVs([otr_base_pv + 'YRMS'])[0]
-            controller.interface.set_TCAV(0)
+            tcav_on_xrms = controller.interface.get_pvs([otr_base_pv + 'YRMS'])[0]
+            controller.interface.set_tcav(0)
 
             #find quad difference to get rms bunch length
             tcav_scale = 1.0 #convert rmsx size to time (units: m/s)

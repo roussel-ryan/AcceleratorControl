@@ -29,14 +29,14 @@ class SingleObjectiveBayesian(bayesian_algorithm.BayesianAlgorithm):
         parameters : list of parameters
              List of parameter.Parameter() objects used for optimization
 
-        objectives : list of observations.Observation
+        objectives : list of observations_list.Observation
              Objective objects to minimize
 
         controller : controller.AWAController
              Controller object used to control the accelerator
  
         constraints : list, optional
-            List of binary constraint observations, 1.0 if constraint is satisfied, 
+            List of binary constraint observations_list, 1.0 if constraint is satisfied,
             0.0 otherwise
 
         maximize : bool, default = False

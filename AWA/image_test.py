@@ -24,8 +24,8 @@ def main():
     logging.basicConfig(level=logging.INFO)
 
     #define controller
-    interf = interface.AWAInterface(Testing = False)
-    c = controller.Controller('config.json', interface = interf)
+    interf = interface.AWAInterface(testing= False)
+    c = controller.Controller('config.json', controller_interface= interf)
 
     screen_obs = observations.AWAScreen(image_directory = 'pics')
 
