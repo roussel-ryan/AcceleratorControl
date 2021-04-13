@@ -24,7 +24,7 @@ def main():
     logging.getLogger('matplotlib').setLevel(logging.WARNING)
 
     # define controller
-    interf = interface.AWAInterface(False, testing=False)
+    interf = interface.SLACInterface()
     c = controller.Controller('config.json', controller_interface=interf)
 
     screen_obs = observations.AWAScreen(n_samples=5)

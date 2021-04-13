@@ -10,8 +10,7 @@ sys.path.append('\\'.join(os.getcwd().split('\\')[:-1]))
 
 import emittance_calculation
 
-from accelerator_control import observations
-import image_processing
+from accelerator_control import observations, image_processing
 
 
 def apply_roi(image, roi_coords):

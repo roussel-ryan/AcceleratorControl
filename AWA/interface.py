@@ -36,6 +36,7 @@ class AWAInterface(interface.AcceleratorInterface):
 
     def __init__(self, use_frame_grabber=True, testing=False):
 
+        super().__init__()
         self.ni_frame_grabber = client.Dispatch('NIFGCtrl')
         self.AWAPGCamera = client.Dispatch('AWAPGCamera.application')
         self.m_CameraClient = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -115,32 +116,32 @@ class AWAInterface(interface.AcceleratorInterface):
                                'before controller_interface is initialized!')
 
     def get_data(self, target_charge=-1, charge_deviation=0.1, n_samples=1):
-        '''
+        """
         get new image and charge data
 
         Arguments
         ---------
         target_charge : float, optional
-            Target charge for valid observation in nC, if negative ignore. 
+            Target charge for valid observation in nC, if negative ignore.
             Default: -1 (ignore)
 
         charge_deviation : float, optional
-            Fractional deviation from target charge on ICT1 allowed for valid 
+            Fractional deviation from target charge on ICT1 allowed for valid
             observation. Default: 0.1
 
         n_samples : int
             Number of samples to take
 
-        NOTE: calculations of centroids and FWHM etc. are based on a region of
+        note - calculations of centroids and FWHM etc. are based on a region of
         interest, which might be changed by the user!
-        
+
         Connect to camera broadcasting TCP port for notifications
         If it is timed out, then just download and return whatever
-        image available 
+        image available
         In order to avoid the complication of TCP buffer cleanup
         we will simply close the connection and reopen it
         elf.
-        '''
+        """
 
         self.logger.debug(f'taking n samples {n_samples}')
 
@@ -242,12 +243,6 @@ class AWAInterface(interface.AcceleratorInterface):
 
         return self.img, sdata, roi
 
-    def set_parameters(self, setvals, channels):
-        # power supply control settings are -10.0 to 10.0
-        # for full dynamic range for bipolar PS.
-        #
-        self.set_beamline(channels, setvals)
-
     def set_parameters(self, parameters, pvvals):
         assert len(parameters) == len(pvvals)
         self.TempVal = pvvals
@@ -258,7 +253,8 @@ class AWAInterface(interface.AcceleratorInterface):
         for i in range(len(parameters)):
             self.logger.debug('sending epics command')
             self.logger.debug(f'caput {parameters[i].channel} {pvvals[i]}')
-            self.logger.debug(f'caput status {caput(parameters[i].channel, pvvals[i])}')
+            status = caput(parameters[i].channel, pvvals[i])
+            self.logger.debug(f'caput return status {status}')
 
     def get_parameters(self, parameters):
         if self.Testing:

@@ -141,7 +141,7 @@ def rotate_beamlets(image):
 
 
 if __name__ == '__main__':
-    data = np.genfromtxt('test_images/onenc250200.txt', names=True)
+    data = np.genfromtxt('../AWA/test_images/onenc250200.txt', names=True)
 
     size = 50e-3
     bins = 700

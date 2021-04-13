@@ -8,7 +8,7 @@ import logging
 
 
 class AcceleratorInterface(ABC):
-    '''
+    """
     low level controller_interface class used to communicate with the accelerator
 
     - should impliment the following via overwriting
@@ -17,25 +17,25 @@ class AcceleratorInterface(ABC):
     - due to the complex nature of custom observations_list please define a specific observation class to
       get measurements, feel free to define methods here to do so
 
-    '''
+    """
 
     def __init__(self):
-        '''establish connections here'''
+        """establish connections here"""
         pass
 
     def set_parameters(self, params, pvals):
-        '''
+        """
         set beamline PV's here
-        
+
         Arguments
         ---------
         params : list
             List of parameter objects (see parameter.py)
 
         pvals : ndarray
-            Array of parameter set points (unnormalized) 
+            Array of parameter set points (unnormalized)
 
-        '''
+        """
         raise NotImplementedError
 
     def get_parameters(self, params):
@@ -44,7 +44,7 @@ class AcceleratorInterface(ABC):
 
 class TestInterface(AcceleratorInterface, ABC):
     def __init__(self):
-        pass
+        super().__init__()
 
     def set_parameters(self, params, pvvals):
         assert len(params) == len(pvvals)
