@@ -1,10 +1,7 @@
+import logging
 from abc import ABC
 
 import numpy as np
-import time
-
-import epics
-import logging
 
 
 class AcceleratorInterface(ABC):
@@ -21,7 +18,7 @@ class AcceleratorInterface(ABC):
 
     def __init__(self):
         """establish connections here"""
-        pass
+        self.logger = logging.getLogger(__name__)
 
     def set_parameters(self, params, pvals):
         """

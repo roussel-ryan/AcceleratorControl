@@ -12,7 +12,82 @@ from accelerator_control import observations
 
 # import image_processing as ip
 
-class OTR2Profiles(observations.GroupObservation):
+class OTR2BeamSize(observations.GroupObservation):
+    def __init__(self, additional_measurements=None, n_samples=1):
+        if additional_measurements is None:
+            additional_measurements = []
+        outputs = ['CX', 'CY', 'XRMS', 'YRMS', 'SUM', 'IMGF']
+
+        super().__init__('OTRBeamSize', outputs, n_samples)
+
+        self.screen_x_size = 800
+        self.screen_y_size = 800
+        self.required_sigmas = 2
+
+    def get_beam_statistics(self, controller):
+        base_channel_name = 'OTRS:IN20:571'
+        obs_names = ['X', 'Y', 'XRMS', 'YRMS', 'SUM']
+        pv_names = [base_channel_name + ':' + ele for ele in obs_names]
+        self.logger.debug(f'getting data from epics {pv_names}')
+        stats = controller.interface.get_parameters(pv_names)
+
+        # if we think that the beam is clipping or not on the screen
+        bad_beam = stats[0] + self.required_sigmas * stats[2] > self.screen_x_size or \
+                   stats[0] - self.required_sigmas * stats[2] < 0 or \
+                   stats[1] + self.required_sigmas * stats[3] > self.screen_y_size or \
+                   stats[1] - self.required_sigmas * stats[3] < 0
+
+        if bad_beam:
+            stats += [0]
+            stats = np.array(stats)
+            stats[:-1] = np.NAN
+            self.logger.warning('bad beam detected')
+
+        else:
+            stats += [1]
+            stats = np.array(stats)
+
+        return stats.reshape(1, -1)
+
+    def __call__(self, controller, param_dict, **kwargs):
+
+        data = []
+        for _ in range(self.n_samples):
+            data += [self.get_beam_statistics(controller)]
+
+        data = np.vstack(data).T
+        data_dict = dict(zip(self.output_names, data)).update(param_dict)
+
+        return pd.DataFrame(data_dict)
+
+
+class Emittance(observations.GroupObservation):
+    def __init__(self, n_samples=1):
+        outputs = ['EMIT', 'EMITF']
+        super(Emittance, self).__init__('Emittance', outputs, n_samples)
+
+        self.emit_lower_bound = 0.0
+        self.emit_upper_bound = 5.0e-6
+
+    def __call__(self, controller, param_dict):
+        data = []
+        for _ in range(self.n_samples):
+            emit = controller.interface.get_emittance()
+
+            if (emit > self.emit_upper_bound) or (emit < self.emit_lower_bound):
+                self.logger.warning(f'measured emittance {emit:.2e} outside of bounds')
+                data += [np.array([np.NAN, 0]).reshape(1, 2)]
+            else:
+                data += [np.array([emit, 1]).reshape(1, 2)]
+
+        data = np.vstack(data).T
+
+        data_dict = dict(zip(self.output_names, data)).update(param_dict)
+
+        return pd.DataFrame(data_dict)
+
+
+class OTR2BunchLength(observations.GroupObservation):
     def __init__(self, measure_z=True):
         self.measure_z = measure_z
         outputs = ['sigma_x', 'sigma_y']

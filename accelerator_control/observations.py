@@ -1,3 +1,5 @@
+import logging
+
 import numpy as np
 import pandas as pd
 
@@ -78,6 +80,8 @@ class GroupObservation:
         self.observation_index = 0
 
         self.output_names = output_names
+
+        self.logger = logging.getLogger(__name__)
 
         # add children observations_list
         for name in self.output_names:

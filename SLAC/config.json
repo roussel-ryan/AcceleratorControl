@@ -2,35 +2,76 @@
     "wait_time": 0.1,
     "parameters": [
         {
-            "name": "FocusingSolenoid",
-            "channel": "Drive:Ctrl:DS1",
+            "name": "Q525",
+            "channel": "QUAD:IN20:525:BCTRL",
             "bounds": [
-                6.05,
-                9.07
+                -5.0,
+                -3.0
             ]
         },
     	{  
-            "name": "MatchingSolenoid",
-            "channel": "Drive:Ctrl:DS3",
+            "name": "Q511",
+            "channel": "QUAD:IN20:511:BCTRL",
             "bounds": [
-                0.0,
-                2.5
+                2.0,
+                7.0
             ]
         },
         {  
-            "name": "LinacPhase",
-            "channel": "SMCtrl:AWA:abs03",
+            "name": "Q441",
+            "channel": "QUAD:IN20:441:BCTRL",
             "bounds": [
-                -640,
-                640
+                -1.0,
+                2.0
+            ]
+        },
+        {
+            "name": "Q425",
+            "channel": "QUAD:IN20:425:BCTRL",
+            "bounds": [
+                -4.0,
+                -1.0
             ]
         },
         {  
-            "name": "DQ5",
-            "channel": "AWA:Bira3Ctrl:Ch04",
+            "name": "Q371",
+            "channel": "QUAD:IN20:371:BCTRL",
             "bounds": [
-                0.0,
-                0.25
+                2.5,
+                2.9
+            ]
+        },
+        {  
+            "name": "Q361",
+            "channel": "QUAD:IN20:361:BCTRL",
+            "bounds": [
+                -3.5,
+                -2.75
+            ]
+        },
+
+        {
+            "name": "SOL1",
+            "channel": "SOLN:IN20:121:BCTRL",
+            "bounds": [
+                0.4,
+                0.55
+            ]
+        },
+        {
+            "name": "CQ01",
+            "channel": "QUAD:IN20:121:BCTRL",
+            "bounds": [
+                -0.02,
+                0.02
+            ]
+        },
+        {
+            "name": "SQ01",
+            "channel": "QUAD:IN20:122:BCTRL",
+            "bounds": [
+                -0.02,
+                0.02
             ]
         }
     ]
