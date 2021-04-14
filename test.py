@@ -7,7 +7,7 @@ from accelerator_control.algorithms import explore
 import matplotlib.pyplot as plt
 
 # main()
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 sobo_obs = observations.TestSOBO()
 
 
@@ -27,8 +27,8 @@ print(c.data)
 objs = mobo_obs.children[:2]
 constraints = [mobo_obs.children[0], mobo_obs.children[-1]]
 ref = torch.tensor((1.0, 5.0))
-opt = explore.BayesianExploration(opt_params, objs, c, constraints)
-opt.run(10)
+opt = explore.BayesianExploration(opt_params, objs, c, constraints, n_steps=10)
+opt.run()
 print(c.data)
 
 # print(opt.gp.state_dict())

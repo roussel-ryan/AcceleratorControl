@@ -128,12 +128,11 @@ class Algorithm:
         self.logger.debug(f'Scaled data from controller:\nX:\n{x}\nf:\n{f}')
         return x, f
 
-    def run(self, n_samples=5):
+    def run(self):
         """
         run the algorithm
         """
-        self.logger.info(f'Starting algorithm run with {self.n_steps} steps' +
-                         f' and {n_samples} samples per step')
+        self.logger.info(f'Starting algorithm run with {self.n_steps} steps')
 
         for i in range(self.n_steps):
             self.logger.info(f'Step {i}')
@@ -151,8 +150,8 @@ class Algorithm:
             # un-normalize candidate
             unn_c = np.zeros_like(candidate)
             for j in range(self.n_parameters):
-                unn_c[0][i] = self.parameters[j].transformer.backward(
-                    candidate[0][i].numpy().reshape(1, 1))
+                unn_c[0][j] = self.parameters[j].transformer.backward(
+                    candidate[0][j].numpy().reshape(1, 1))
             self.logger.debug(f'un-normed candidate is {unn_c}')
 
             # set parameters

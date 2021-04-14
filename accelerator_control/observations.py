@@ -130,8 +130,9 @@ class TestMOBO(GroupObservation):
         super().__init__(name, output_names, n_samples)
 
     def __call__(self, controller, param_dict):
-        vals = controller.interface.test_observation(self.n_samples)
-        for i in range(len(self.output_names)):
-            param_dict[self.output_names[i]] = vals.T[i]
+        data = controller.interface.test_observation(self.n_samples).T
 
-        return pd.DataFrame(param_dict)
+        data_dict = dict(zip(self.output_names, data))
+        data_dict.update(param_dict)
+
+        return pd.DataFrame(data_dict)

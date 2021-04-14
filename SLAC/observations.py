@@ -10,8 +10,6 @@ sys.path.append('\\'.join(os.getcwd().split('\\')[:-1]))
 from accelerator_control import observations
 
 
-# import image_processing as ip
-
 class OTR2BeamSize(observations.GroupObservation):
     def __init__(self, additional_measurements=None, n_samples=1):
         if additional_measurements is None:
@@ -82,7 +80,8 @@ class Emittance(observations.GroupObservation):
 
         data = np.vstack(data).T
 
-        data_dict = dict(zip(self.output_names, data)).update(param_dict)
+        data_dict = dict(zip(self.output_names, data))
+        data_dict.update(param_dict)
 
         return pd.DataFrame(data_dict)
 

@@ -91,7 +91,7 @@ class AWAScreen(observations.GroupObservation):
         self.logger.debug(f'saving image data to {self.image_directory}')
         fname = f'{self.image_directory}/img_{self.observation_index}.h5'
         with h5py.File(fname, 'w') as f:
-            for name, item in data_dict.item():
+            for name, item in data_dict.items():
                 f[''].attrs[name] = item
 
             for i in range(self.n_samples):
@@ -159,7 +159,8 @@ class AWAScreen(observations.GroupObservation):
         """
         images, scalar_data = self._get_and_check_data(controller)
 
-        data_dict = dict(zip(self.output_names, scalar_data)).update(param_dict)
+        data_dict = dict(zip(self.output_names, scalar_data))
+        data_dict.update(param_dict)
 
         data = pd.DataFrame(data_dict)
 
@@ -205,7 +206,7 @@ class Emittance(AWAScreen):
         super().__init__(name='EMIT',
                          additional_outputs=['EMIT', 'IXXI', 'IXPXPI', 'IXXPI', 'ROT_ANG'], **kwargs)
 
-    def __call__(self, controller, **kwargs):
+    def __call__(self, controller, param_dict, **kwargs):
         """
         calculate emittance from screen measurement
 
@@ -242,10 +243,13 @@ class Emittance(AWAScreen):
         rotation_angles = np.array(rotation_angles).reshape(-1, 1)
 
         scalar_data = np.hstack([scalar_data, emittances, rotation_angles])
-        data = pd.DataFrame(data=scalar_data,
-                            columns=self.output_names)
-        self.observation_index += 1
 
-        self.save_images(images, scalar_data)
+        data_dict = dict(zip(self.output_names, scalar_data))
+        data_dict.update(param_dict)
+
+        data = pd.DataFrame(data_dict)
+
+        self.observation_index += 1
+        self.save_images(images, data_dict)
 
         return data
