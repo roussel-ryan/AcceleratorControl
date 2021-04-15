@@ -32,27 +32,28 @@ def main():
                                            2.84,
                                            1086,
                                            n_samples=5,
-                                           target_charge=5.3e-9,
+                                           target_charge=5.5e-9,
                                            charge_deviation=0.1)
 
-    # scan_vals = np.array(((8.3, 1.2),
+    #scan_vals = np.array(((8.5, 1.5, 0.17, 0.25),
+                          #(7.5, 1.6, 0.17, 0.25)))
     #                      (8.3, 1.4),
     #                      (8.3, 1.6)))
     # scan_vals1 = np.array(((8.84, 0.37, 0.0))).reshape(1,-1)
     
-    if 1:
-        n = 3
+    if 0:
+        n = 5
         x = np.linspace(0,1.0,n)
         xx = np.meshgrid(x,x)
         scan_vals = np.vstack([ele.ravel() for ele in xx]).T
         print(scan_vals)
     
     
-    #scan_vals = np.random.rand(2, 2)
+    scan_vals = np.random.rand(10, 4)
     # scan_vals = np.linspace(-0.05,0.3,10).reshape(-1,1)
 
-    param = c.get_named_parameters(['FocusingSolenoid',
-                                    'MatchingSolenoid'])
+    param = c.get_named_parameters(['FocusingSolenoid','MatchingSolenoid','DQ4','DQ5'])
+    #param = c.get_named_parameters(['DQ4','DQ5'])
 
     # param = c.get_named_parameters(['DQ5'])
     pre_observation_func = pre_observation.Sleep(5)
@@ -75,29 +76,35 @@ def main():
                                       pre_observation_function=pre_observation_func)
         emit_sampling.run()
 
-    # c.load_data('data/good_emit_exploration.pkl')
+    #c.load_data('data/data_1618518525.pkl')
 
     # do bayesian exploration
-    roi_constraint = screen_obs.children[9]
+    roi_constraints = [screen_obs.children[0],
+                      screen_obs.children[1]]
+    bounds = [[0, 130],[0, 180]]
     bexp = explore.BayesianExploration(param,
                                        [emittance_obs],
                                        c,
-                                       [roi_constraint],
+                                       roi_constraints,
+                                       beta = 2.0,
+                                       bounds=bounds,
                                        n_steps=50,
                                        sigma=100)
-    if 0:
+    if 1:
         bexp.run()
         # model = bexp.create_model()
         # bexp.get_acq(model, True)
 
     # c.load_data('data/good_3_parameter_exploration.pkl')
-    print(c.data[['MatchingSolenoid', 'FocusingSolenoid', 'LinacPhase',
+    print(c.data[['DQ4', 'DQ6',
                   'EMIT', 'IMGF', 'ROT_ANG']])
     # print(c.data)
     model = bexp.create_model()
     models = model.models
     for m in models:
-        print(m.covar_module.base_kernel.lengthscale)
+        for name, item in m.covar_module.named_parameters():
+            print(f'{name}:{item}')
+            #print(m.covar_module.base_kernel.lengthscale)
     # bexp.get_acq(model, True)
     # bexp.plot_model(0, False)
 

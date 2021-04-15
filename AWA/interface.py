@@ -204,13 +204,14 @@ class AWAInterface(interface.AcceleratorInterface):
 
                         except SyntaxError:
                             self.logger.warning('sleeping!')
-                            time.sleep(1)
+                            time.sleep(0.1)
 
                     else:
                         # if we are considering charge limits then print a warning
                         if target_charge > 0:
                             self.logger.warning(f'ICT1 charge:{ict1_charge} nC'
                                                 f' is outside target range')
+                            time.sleep(0.1)
 
                     self.USBDIO.SetReadyState(2, 0)
 
@@ -240,7 +241,7 @@ class AWAInterface(interface.AcceleratorInterface):
                            self.CentroidX,
                            self.CentroidY,
                            self.charge])
-
+        
         return self.img, sdata, roi
 
     def set_parameters(self, parameters, pvvals):
