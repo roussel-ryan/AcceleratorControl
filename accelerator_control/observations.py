@@ -4,9 +4,6 @@ import numpy as np
 import pandas as pd
 
 
-# import image_processing as ip
-
-
 class Observation:
     """
     Observation function class that keeps track of function name and callable
