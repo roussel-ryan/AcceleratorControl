@@ -14,7 +14,7 @@ from gpytorch.mlls import ExactMarginalLogLikelihood
 
 from accelerator_control import transformer
 
-data = pd.read_pickle('data/data_1618513015.pkl')
+data = pd.read_pickle('data/2d_scan_big.pkl')
 
 #print(data.loc[data['MatchingSolenoid'] < 1.0].loc[data['DQ5'] > 0.2].head(40))
 
@@ -25,14 +25,14 @@ data.plot('MatchingSolenoid', 'FocusingSolenoid', style='.')
 fig = plt.figure()
 ax = fig.add_subplot()
 
-random_samples = data.iloc[:50]
-alg_samples = data.iloc[50:]
+
+alg_samples = data
 bad_samples = alg_samples[alg_samples['IMGF'] == 0]
 good_samples = alg_samples[alg_samples['IMGF'] == 1]
-samples = [random_samples, bad_samples, good_samples]
-labels = ['Random', 'Not Successful', 'Successful']
+samples = [bad_samples, good_samples]
+labels = ['Not Successful', 'Successful']
 
-for i in [0, 1, 2]:
+for i in [0, 1]:
     sub_data = samples[i]
     ax.scatter(sub_data['MatchingSolenoid'],
                sub_data['FocusingSolenoid'], marker='o', s=20, label=labels[i])
@@ -44,9 +44,11 @@ fig2, ax2 = plt.subplots()
 ax2.plot(data['MatchingSolenoid'], data['EMIT'], '.')
 
 safe_data = data.dropna()
-X = safe_data[['MatchingSolenoid', 'FocusingSolenoid', 'DQ5']].to_numpy()
-XC = data[['MatchingSolenoid', 'FocusingSolenoid', 'DQ5']].to_numpy()
+X = safe_data[['MatchingSolenoid', 'FocusingSolenoid']].to_numpy()
+XC = data[['MatchingSolenoid', 'FocusingSolenoid']].to_numpy()
 F = safe_data['EMIT'].to_numpy().reshape(-1, 1)
+
+print(X)
 
 trans_x = transformer.Transformer(X, 'normalize')
 trans_f = transformer.Transformer(F, 'standardize')
@@ -71,7 +73,7 @@ n = 20
 x = np.linspace(0, 1, n)
 xx = np.meshgrid(x, x)
 pts = np.vstack([ele.ravel() for ele in xx]).T
-pts = np.hstack([pts, np.zeros(n ** 2).reshape(-1, 1)])
+pts = np.hstack(pts)
 pts = torch.from_numpy(pts)
 
 with torch.no_grad():

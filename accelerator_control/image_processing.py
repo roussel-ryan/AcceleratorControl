@@ -62,6 +62,15 @@ def process_and_fit(image, min_size=800, verbose=False):
 
     n_blobs = len(ellipses)
 
+    proj_x = np.sum(smoothed_image, axis=0)
+    proj_y = np.sum(smoothed_image, axis=1)
+
+    # calculate stds
+    x_len = len(proj_x)
+    y_len = len(proj_y)
+    std_x = weighted_std(np.arange(x_len), proj_x)
+    std_y = weighted_std(np.arange(y_len), proj_y)
+
     if verbose:
         fig, ax = plt.subplots(1, 3)
         c = ax[0].imshow(image)
@@ -71,7 +80,7 @@ def process_and_fit(image, min_size=800, verbose=False):
         fig.colorbar(c)
         plt.show()
 
-    return thresholded_image, smoothed_image, n_blobs, ellipses
+    return thresholded_image, smoothed_image, n_blobs, ellipses, std_x, std_y
 
 
 def check_image(timage, simage, n_blobs, n_blobs_required=1):
@@ -105,10 +114,10 @@ def check_image(timage, simage, n_blobs, n_blobs_required=1):
     std_x = weighted_std(np.arange(x_len), proj_x)
     std_y = weighted_std(np.arange(y_len), proj_y)
 
-    len_factor = 5
-    if (std_x * len_factor > x_len) or (std_y * len_factor > y_len):
-        logger.warning('beam too diffuse')
-        return 0
+    #len_factor = 5
+    #if (std_x * len_factor > x_len) or (std_y * len_factor > y_len):
+    #    logger.warning('beam too diffuse')
+    #    return 0
 
     # if there is no beam on the edges
     if zero_surrounded(timage):
@@ -132,7 +141,7 @@ def remove_small_blobs(image, min_size):
 
 def rotate_beamlets(image):
     logger = logging.getLogger(__name__)
-    timage, simage, n_blobs, ellipses = process_and_fit(image, min_size=500)
+    timage, simage, n_blobs, ellipses, _, _ = process_and_fit(image, min_size=500)
 
     mean_angle = np.mean(np.array([ele[-1] for ele in ellipses]))
     rotated_image = transform.rotate(simage, mean_angle - 90.0)

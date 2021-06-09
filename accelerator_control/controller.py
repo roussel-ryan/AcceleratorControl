@@ -66,6 +66,7 @@ class Controller:
         except AttributeError:
             self.data = obs_data
 
+        print(self.data['EMIT'])
         self.save_data()
 
     def get_named_parameters(self, names):

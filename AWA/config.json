@@ -26,11 +26,27 @@
             ]
         },
         {  
+            "name": "DQ4",
+            "channel": "AWA:Bira3Ctrl:Ch03",
+            "bounds": [
+                0.0,
+                0.5
+            ]
+        },
+        {  
             "name": "DQ5",
             "channel": "AWA:Bira3Ctrl:Ch04",
             "bounds": [
                 0.0,
-                0.25
+                0.5
+            ]
+        },
+        {  
+            "name": "DQ6",
+            "channel": "AWA:Bira3Ctrl:Ch05",
+            "bounds": [
+                -0.25,
+                0.0
             ]
         }
     ]

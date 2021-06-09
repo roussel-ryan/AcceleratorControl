@@ -18,7 +18,7 @@ class BayesianExploration(bayesian_algorithm.BayesianAlgorithm, ABC):
 
     """
 
-    def __init__(self, parameters, observations_list, controller, constraints, **kwargs):
+    def __init__(self, parameters, observations_list, controller, constraints, bounds = None, **kwargs):
         """
         Initialize optimizer
 
@@ -44,6 +44,11 @@ class BayesianExploration(bayesian_algorithm.BayesianAlgorithm, ABC):
         self.n_observation_targets = len(observations_list)
         self.n_constraints = len(constraints)
 
+        if bounds is None:
+            self.bounds = [None for _ in range(self.n_constraints)]
+        else:
+            self.bounds = bounds
+        
         self.beta = kwargs.get('beta', 1e6)
 
         # coefficient of sigma matrix for proximal term exploration
@@ -69,7 +74,12 @@ class BayesianExploration(bayesian_algorithm.BayesianAlgorithm, ABC):
             self.logger.debug(f'n_constraints {self.n_constraints}')
 
             for i in range(0, self.n_constraints):
-                constrs += [binary_constraint.BinaryConstraint(model, i + n_objectives)]
+                if self.bounds[i] is None:
+                    constrs += [binary_constraint.BinaryConstraint(model, i + n_objectives)]
+                else:
+                    constrs += [binary_constraint.BinaryConstraint(model, i + n_objectives, 
+                                                                   self.bounds[i][0],
+                                                                   self.bounds[i][1])]
 
             self.logger.debug(constrs[0].model.train_targets)
 

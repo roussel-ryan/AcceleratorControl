@@ -67,7 +67,9 @@ class AWAScreen(observations.GroupObservation):
             additional_outputs = []
         self.logger = logging.getLogger(__name__)
 
-        outputs = ['FWHMX',
+        outputs = ['XRMS',
+                   'YRMS',
+                   'FWHMX',
                    'FWHMY',
                    'FWHML',
                    'CX', 'CY',
@@ -92,7 +94,8 @@ class AWAScreen(observations.GroupObservation):
         fname = f'{self.image_directory}/img_{self.observation_index}.h5'
         with h5py.File(fname, 'w') as f:
             for name, item in data_dict.items():
-                f[''].attrs[name] = item
+                if item is not None:
+                    f['/'].attrs[name] = item
 
             for i in range(self.n_samples):
                 f.create_dataset(f'image_{i}', data=images[i])
@@ -111,9 +114,9 @@ class AWAScreen(observations.GroupObservation):
         beamsize/location data.
 
         """
-        images, sdata, roi = controller.interface.GetNewImage(self.target_charge,
-                                                              self.charge_deviation,
-                                                              NSamples=self.n_samples)
+        images, sdata, roi = controller.interface.get_data(self.target_charge,
+                                                           self.charge_deviation,
+                                                           n_samples=self.n_samples)
 
         # if image is not viable then set this flag to 0 for each image
         good_image = np.ones(len(images))
@@ -131,12 +134,18 @@ class AWAScreen(observations.GroupObservation):
         # process and identify blobs in image
         # check that a beam exists and is inside the roi for each image
         min_size = 800
+        xrms = []
+        yrms = []
         for i in range(len(images)):
-            timg, simg, n_blobs, elips = image_processing.process_and_fit(roi_images[i],
+            timg, simg, n_blobs, elips, xr, yr = image_processing.process_and_fit(roi_images[i],
                                                                           min_size)
-
+            xrms += [xr]
+            yrms += [yr]
             good_image[i] = image_processing.check_image(timg, simg,
                                                          n_blobs, n_blobs_required)
+
+        xrms = np.array(xrms).reshape(-1,1)
+        yrms = np.array(yrms).reshape(-1,1)
 
         invalid_image_idx = np.nonzero(1.0 - good_image)[0]
         self.logger.debug(f'invalid image idx: {invalid_image_idx}')
@@ -144,10 +153,10 @@ class AWAScreen(observations.GroupObservation):
         # where good_image = 0 set all data elements ['FWHMX/Y/L','CX/Y']  to np.NaN
         self.logger.debug(sdata)
         self.logger.debug(f'good_image: {good_image}')
-        scalar_data = np.hstack([sdata, good_image.reshape(-1, 1)])
+        scalar_data = np.hstack([xrms, yrms, sdata, good_image.reshape(-1, 1)])
 
-        for i in range(len(invalid_image_idx)):
-            scalar_data[invalid_image_idx[i], np.arange(5)] = np.nan
+        #for i in range(len(invalid_image_idx)):
+        #    scalar_data[invalid_image_idx[i], np.arange(5)] = np.nan
 
         self.logger.debug(f'scalar data after image checking\n{scalar_data}')
         return roi_images, scalar_data
@@ -159,7 +168,7 @@ class AWAScreen(observations.GroupObservation):
         """
         images, scalar_data = self._get_and_check_data(controller)
 
-        data_dict = dict(zip(self.output_names, scalar_data))
+        data_dict = dict(zip(self.output_names, scalar_data.T))
         data_dict.update(param_dict)
 
         data = pd.DataFrame(data_dict)
@@ -244,7 +253,7 @@ class Emittance(AWAScreen):
 
         scalar_data = np.hstack([scalar_data, emittances, rotation_angles])
 
-        data_dict = dict(zip(self.output_names, scalar_data))
+        data_dict = dict(zip(self.output_names, scalar_data.T))
         data_dict.update(param_dict)
 
         data = pd.DataFrame(data_dict)
